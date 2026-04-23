@@ -75,11 +75,13 @@ export async function getAvailabilityContext(date: string): Promise<string> {
 
     const bookedMap = new Map(booked.map((b) => [b.timeSlot, b.count]));
     const available = slots.filter((s) => (bookedMap.get(s) ?? 0) < doc.maxPatientsPerSlot);
+    const fullSlots = slots.filter((s) => (bookedMap.get(s) ?? 0) >= doc.maxPatientsPerSlot);
 
     if (available.length === 0) {
       lines.push(`- ${doc.name} (${doc.specialization}): Fully booked`);
     } else {
-      lines.push(`- ${doc.name} (${doc.specialization}): Available slots: ${available.join(", ")}`);
+      const fullyBookedNote = fullSlots.length > 0 ? ` Full slots (unavailable): ${fullSlots.join(", ")}.` : "";
+      lines.push(`- ${doc.name} (${doc.specialization}): Arrives ${doc.workingHoursStart}, available until ${doc.workingHoursEnd} (${doc.slotDurationMinutes}-min slots).${fullyBookedNote} When patient picks a time, round to nearest valid slot.`);
     }
   }
 
@@ -137,11 +139,11 @@ ${availabilityDayAfter}
 
 ━━━ WHAT YOU DO ━━━
 1. Greet them warmly and ask what they need
-2. Find out: which doctor (or what kind of doctor), what date, what time
-3. Check the availability info above
+2. Find out: which doctor (or what kind of doctor) and what date
+3. Once you know the doctor, tell the patient simply: "Dr. X comes at [arrival time] and is available until [end time]. What time works for you?" — do NOT list out all the individual slots
 4. If a doctor has EMERGENCY - NOT COMING TODAY: apologize and suggest another doctor or another day
 5. If a doctor has EMERGENCY - WILL BE LATE: mention this to the patient before booking early slots
-6. If a slot is full: suggest the next available one — don't just say "sorry, it's full"
+6. When the patient says a time, check the availability info: round to the nearest valid slot boundary and confirm if it's free. If that slot is full, suggest the next available time naturally in conversation.
 7. Once you have everything (name, doctor ID, date, time): book it using the ACTION below
 8. After booking, give them a warm confirmation with all the details
 
