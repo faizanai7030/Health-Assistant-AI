@@ -18,18 +18,26 @@ import type {
 
 import type {
   Appointment,
+  AppointmentReminder,
   CreateAppointmentBody,
   CreateDoctorBody,
+  CreateReminderBody,
   DashboardSummary,
   Doctor,
   DoctorAvailability,
+  DoctorEmergency,
+  DoctorPortalData,
+  GenerateRemindersResponse,
   GetDoctorAvailabilityParams,
   HealthStatus,
   ListAppointmentsParams,
+  ListRemindersParams,
+  SetEmergencyBody,
   SimulateMessageBody,
   SimulateMessageResponse,
   UpdateAppointmentBody,
   UpdateDoctorBody,
+  UpdateReminderBody,
   WhatsAppConversation,
   WhatsAppConversationWithMessages,
   WhatsappWebhookBody,
@@ -46,7 +54,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -279,6 +286,169 @@ export const useCreateDoctor = <
 > => {
   return useMutation(getCreateDoctorMutationOptions(options));
 };
+
+/**
+ * @summary Get all doctor emergency statuses for today
+ */
+export const getGetDoctorEmergenciesTodayUrl = () => {
+  return `/api/doctors/emergency-today`;
+};
+
+export const getDoctorEmergenciesToday = async (
+  options?: RequestInit,
+): Promise<DoctorEmergency[]> => {
+  return customFetch<DoctorEmergency[]>(getGetDoctorEmergenciesTodayUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDoctorEmergenciesTodayQueryKey = () => {
+  return [`/api/doctors/emergency-today`] as const;
+};
+
+export const getGetDoctorEmergenciesTodayQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDoctorEmergenciesToday>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorEmergenciesToday>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetDoctorEmergenciesTodayQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDoctorEmergenciesToday>>
+  > = ({ signal }) => getDoctorEmergenciesToday({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorEmergenciesToday>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDoctorEmergenciesTodayQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDoctorEmergenciesToday>>
+>;
+export type GetDoctorEmergenciesTodayQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all doctor emergency statuses for today
+ */
+
+export function useGetDoctorEmergenciesToday<
+  TData = Awaited<ReturnType<typeof getDoctorEmergenciesToday>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorEmergenciesToday>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDoctorEmergenciesTodayQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get doctor info and schedule via portal token
+ */
+export const getGetDoctorPortalUrl = (token: string) => {
+  return `/api/doctors/portal/${token}`;
+};
+
+export const getDoctorPortal = async (
+  token: string,
+  options?: RequestInit,
+): Promise<DoctorPortalData> => {
+  return customFetch<DoctorPortalData>(getGetDoctorPortalUrl(token), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDoctorPortalQueryKey = (token: string) => {
+  return [`/api/doctors/portal/${token}`] as const;
+};
+
+export const getGetDoctorPortalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDoctorPortal>>,
+  TError = ErrorType<void>,
+>(
+  token: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDoctorPortal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDoctorPortalQueryKey(token);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDoctorPortal>>> = ({
+    signal,
+  }) => getDoctorPortal(token, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!token,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorPortal>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDoctorPortalQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDoctorPortal>>
+>;
+export type GetDoctorPortalQueryError = ErrorType<void>;
+
+/**
+ * @summary Get doctor info and schedule via portal token
+ */
+
+export function useGetDoctorPortal<
+  TData = Awaited<ReturnType<typeof getDoctorPortal>>,
+  TError = ErrorType<void>,
+>(
+  token: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDoctorPortal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDoctorPortalQueryOptions(token, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get a doctor by ID
@@ -655,6 +825,352 @@ export function useGetDoctorAvailability<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Set emergency status for a doctor (late or absent today)
+ */
+export const getSetDoctorEmergencyUrl = (id: number) => {
+  return `/api/doctors/${id}/emergency`;
+};
+
+export const setDoctorEmergency = async (
+  id: number,
+  setEmergencyBody: SetEmergencyBody,
+  options?: RequestInit,
+): Promise<DoctorEmergency> => {
+  return customFetch<DoctorEmergency>(getSetDoctorEmergencyUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setEmergencyBody),
+  });
+};
+
+export const getSetDoctorEmergencyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDoctorEmergency>>,
+    TError,
+    { id: number; data: BodyType<SetEmergencyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setDoctorEmergency>>,
+  TError,
+  { id: number; data: BodyType<SetEmergencyBody> },
+  TContext
+> => {
+  const mutationKey = ["setDoctorEmergency"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setDoctorEmergency>>,
+    { id: number; data: BodyType<SetEmergencyBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setDoctorEmergency(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetDoctorEmergencyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setDoctorEmergency>>
+>;
+export type SetDoctorEmergencyMutationBody = BodyType<SetEmergencyBody>;
+export type SetDoctorEmergencyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set emergency status for a doctor (late or absent today)
+ */
+export const useSetDoctorEmergency = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDoctorEmergency>>,
+    TError,
+    { id: number; data: BodyType<SetEmergencyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setDoctorEmergency>>,
+  TError,
+  { id: number; data: BodyType<SetEmergencyBody> },
+  TContext
+> => {
+  return useMutation(getSetDoctorEmergencyMutationOptions(options));
+};
+
+/**
+ * @summary Clear emergency status for today
+ */
+export const getClearDoctorEmergencyUrl = (id: number) => {
+  return `/api/doctors/${id}/emergency`;
+};
+
+export const clearDoctorEmergency = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getClearDoctorEmergencyUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearDoctorEmergencyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearDoctorEmergency>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearDoctorEmergency>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["clearDoctorEmergency"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearDoctorEmergency>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return clearDoctorEmergency(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearDoctorEmergencyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearDoctorEmergency>>
+>;
+
+export type ClearDoctorEmergencyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Clear emergency status for today
+ */
+export const useClearDoctorEmergency = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearDoctorEmergency>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearDoctorEmergency>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getClearDoctorEmergencyMutationOptions(options));
+};
+
+/**
+ * @summary Doctor sets their own emergency status via portal
+ */
+export const getSetDoctorEmergencyViaPortalUrl = (token: string) => {
+  return `/api/doctors/portal/${token}/emergency`;
+};
+
+export const setDoctorEmergencyViaPortal = async (
+  token: string,
+  setEmergencyBody: SetEmergencyBody,
+  options?: RequestInit,
+): Promise<DoctorEmergency> => {
+  return customFetch<DoctorEmergency>(
+    getSetDoctorEmergencyViaPortalUrl(token),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(setEmergencyBody),
+    },
+  );
+};
+
+export const getSetDoctorEmergencyViaPortalMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDoctorEmergencyViaPortal>>,
+    TError,
+    { token: string; data: BodyType<SetEmergencyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setDoctorEmergencyViaPortal>>,
+  TError,
+  { token: string; data: BodyType<SetEmergencyBody> },
+  TContext
+> => {
+  const mutationKey = ["setDoctorEmergencyViaPortal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setDoctorEmergencyViaPortal>>,
+    { token: string; data: BodyType<SetEmergencyBody> }
+  > = (props) => {
+    const { token, data } = props ?? {};
+
+    return setDoctorEmergencyViaPortal(token, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetDoctorEmergencyViaPortalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setDoctorEmergencyViaPortal>>
+>;
+export type SetDoctorEmergencyViaPortalMutationBody =
+  BodyType<SetEmergencyBody>;
+export type SetDoctorEmergencyViaPortalMutationError = ErrorType<void>;
+
+/**
+ * @summary Doctor sets their own emergency status via portal
+ */
+export const useSetDoctorEmergencyViaPortal = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDoctorEmergencyViaPortal>>,
+    TError,
+    { token: string; data: BodyType<SetEmergencyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setDoctorEmergencyViaPortal>>,
+  TError,
+  { token: string; data: BodyType<SetEmergencyBody> },
+  TContext
+> => {
+  return useMutation(getSetDoctorEmergencyViaPortalMutationOptions(options));
+};
+
+/**
+ * @summary Doctor clears their emergency status via portal
+ */
+export const getClearDoctorEmergencyViaPortalUrl = (token: string) => {
+  return `/api/doctors/portal/${token}/emergency`;
+};
+
+export const clearDoctorEmergencyViaPortal = async (
+  token: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getClearDoctorEmergencyViaPortalUrl(token), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearDoctorEmergencyViaPortalMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearDoctorEmergencyViaPortal>>,
+    TError,
+    { token: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearDoctorEmergencyViaPortal>>,
+  TError,
+  { token: string },
+  TContext
+> => {
+  const mutationKey = ["clearDoctorEmergencyViaPortal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearDoctorEmergencyViaPortal>>,
+    { token: string }
+  > = (props) => {
+    const { token } = props ?? {};
+
+    return clearDoctorEmergencyViaPortal(token, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearDoctorEmergencyViaPortalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearDoctorEmergencyViaPortal>>
+>;
+
+export type ClearDoctorEmergencyViaPortalMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Doctor clears their emergency status via portal
+ */
+export const useClearDoctorEmergencyViaPortal = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearDoctorEmergencyViaPortal>>,
+    TError,
+    { token: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearDoctorEmergencyViaPortal>>,
+  TError,
+  { token: string },
+  TContext
+> => {
+  return useMutation(getClearDoctorEmergencyViaPortalMutationOptions(options));
+};
 
 /**
  * @summary List appointments
@@ -1095,6 +1611,357 @@ export const useDeleteAppointment = <
   TContext
 > => {
   return useMutation(getDeleteAppointmentMutationOptions(options));
+};
+
+/**
+ * @summary List all appointment reminders
+ */
+export const getListRemindersUrl = (params?: ListRemindersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reminders?${stringifiedParams}`
+    : `/api/reminders`;
+};
+
+export const listReminders = async (
+  params?: ListRemindersParams,
+  options?: RequestInit,
+): Promise<AppointmentReminder[]> => {
+  return customFetch<AppointmentReminder[]>(getListRemindersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRemindersQueryKey = (params?: ListRemindersParams) => {
+  return [`/api/reminders`, ...(params ? [params] : [])] as const;
+};
+
+export const getListRemindersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listReminders>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListRemindersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listReminders>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRemindersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listReminders>>> = ({
+    signal,
+  }) => listReminders(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listReminders>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRemindersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listReminders>>
+>;
+export type ListRemindersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all appointment reminders
+ */
+
+export function useListReminders<
+  TData = Awaited<ReturnType<typeof listReminders>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListRemindersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listReminders>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRemindersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Schedule a reminder for an appointment
+ */
+export const getCreateReminderUrl = () => {
+  return `/api/reminders`;
+};
+
+export const createReminder = async (
+  createReminderBody: CreateReminderBody,
+  options?: RequestInit,
+): Promise<AppointmentReminder> => {
+  return customFetch<AppointmentReminder>(getCreateReminderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createReminderBody),
+  });
+};
+
+export const getCreateReminderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReminder>>,
+    TError,
+    { data: BodyType<CreateReminderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createReminder>>,
+  TError,
+  { data: BodyType<CreateReminderBody> },
+  TContext
+> => {
+  const mutationKey = ["createReminder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createReminder>>,
+    { data: BodyType<CreateReminderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createReminder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateReminderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createReminder>>
+>;
+export type CreateReminderMutationBody = BodyType<CreateReminderBody>;
+export type CreateReminderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Schedule a reminder for an appointment
+ */
+export const useCreateReminder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReminder>>,
+    TError,
+    { data: BodyType<CreateReminderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createReminder>>,
+  TError,
+  { data: BodyType<CreateReminderBody> },
+  TContext
+> => {
+  return useMutation(getCreateReminderMutationOptions(options));
+};
+
+/**
+ * @summary Update reminder status
+ */
+export const getUpdateReminderUrl = (id: number) => {
+  return `/api/reminders/${id}`;
+};
+
+export const updateReminder = async (
+  id: number,
+  updateReminderBody: UpdateReminderBody,
+  options?: RequestInit,
+): Promise<AppointmentReminder> => {
+  return customFetch<AppointmentReminder>(getUpdateReminderUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateReminderBody),
+  });
+};
+
+export const getUpdateReminderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateReminder>>,
+    TError,
+    { id: number; data: BodyType<UpdateReminderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateReminder>>,
+  TError,
+  { id: number; data: BodyType<UpdateReminderBody> },
+  TContext
+> => {
+  const mutationKey = ["updateReminder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateReminder>>,
+    { id: number; data: BodyType<UpdateReminderBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateReminder(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateReminderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateReminder>>
+>;
+export type UpdateReminderMutationBody = BodyType<UpdateReminderBody>;
+export type UpdateReminderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update reminder status
+ */
+export const useUpdateReminder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateReminder>>,
+    TError,
+    { id: number; data: BodyType<UpdateReminderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateReminder>>,
+  TError,
+  { id: number; data: BodyType<UpdateReminderBody> },
+  TContext
+> => {
+  return useMutation(getUpdateReminderMutationOptions(options));
+};
+
+/**
+ * @summary Auto-generate reminders for all of today's appointments
+ */
+export const getGenerateTodayRemindersUrl = () => {
+  return `/api/reminders/generate-today`;
+};
+
+export const generateTodayReminders = async (
+  options?: RequestInit,
+): Promise<GenerateRemindersResponse> => {
+  return customFetch<GenerateRemindersResponse>(
+    getGenerateTodayRemindersUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getGenerateTodayRemindersMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateTodayReminders>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateTodayReminders>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["generateTodayReminders"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateTodayReminders>>,
+    void
+  > = () => {
+    return generateTodayReminders(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateTodayRemindersMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateTodayReminders>>
+>;
+
+export type GenerateTodayRemindersMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Auto-generate reminders for all of today's appointments
+ */
+export const useGenerateTodayReminders = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateTodayReminders>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateTodayReminders>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getGenerateTodayRemindersMutationOptions(options));
 };
 
 /**

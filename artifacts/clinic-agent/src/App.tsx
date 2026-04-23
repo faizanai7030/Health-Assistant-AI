@@ -10,6 +10,8 @@ import Doctors from "@/pages/doctors";
 import Appointments from "@/pages/appointments";
 import Conversations from "@/pages/conversations";
 import Simulator from "@/pages/simulator";
+import Reminders from "@/pages/reminders";
+import DoctorPortal from "@/pages/doctor-portal";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,19 +24,25 @@ const queryClient = new QueryClient({
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/">
-          <Redirect to="/dashboard" />
-        </Route>
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/doctors" component={Doctors} />
-        <Route path="/appointments" component={Appointments} />
-        <Route path="/conversations" component={Conversations} />
-        <Route path="/simulator" component={Simulator} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <Route path="/doctor-portal/:token" component={DoctorPortal} />
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/">
+              <Redirect to="/dashboard" />
+            </Route>
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/doctors" component={Doctors} />
+            <Route path="/appointments" component={Appointments} />
+            <Route path="/reminders" component={Reminders} />
+            <Route path="/conversations" component={Conversations} />
+            <Route path="/simulator" component={Simulator} />
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 

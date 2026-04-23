@@ -1,15 +1,23 @@
 import { useState } from "react";
-import { useListDoctors, getListDoctorsQueryKey, useCreateDoctor, useUpdateDoctor, useDeleteDoctor } from "@workspace/api-client-react";
+import {
+  useListDoctors,
+  getListDoctorsQueryKey,
+  useCreateDoctor,
+  useUpdateDoctor,
+  useDeleteDoctor,
+  useGetDoctorEmergenciesToday,
+  useSetDoctorEmergency,
+  useClearDoctorEmergency,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, User, Stethoscope, Phone, Clock, Pencil, Trash2 } from "lucide-react";
+import { Plus, User, Stethoscope, Phone, Clock, Pencil, Trash2, Link2, AlertTriangle, XCircle } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,9 +44,15 @@ export default function Doctors() {
     query: { queryKey: getListDoctorsQueryKey() }
   });
 
+  const { data: emergencies } = useGetDoctorEmergenciesToday();
+
   const createDoc = useCreateDoctor();
   const updateDoc = useUpdateDoctor();
   const deleteDoc = useDeleteDoctor();
+  const setEmergency = useSetDoctorEmergency();
+  const clearEmergency = useClearDoctorEmergency();
+
+  const emergencyMap = new Map(emergencies?.map((e) => [e.doctorId, e]) ?? []);
 
   const form = useForm<z.infer<typeof doctorSchema>>({
     resolver: zodResolver(doctorSchema),
@@ -98,6 +112,32 @@ export default function Doctors() {
         }
       });
     }
+  };
+
+  const copyPortalLink = (token: string) => {
+    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "");
+    const url = `${base}/doctor-portal/${token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({ title: "Portal link copied!", description: "Share this with the doctor to open on their phone." });
+    });
+  };
+
+  const handleSetEmergency = (doctorId: number, type: "late" | "absent") => {
+    setEmergency.mutate({ id: doctorId, data: { type } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        toast({ title: `Doctor marked as ${type === "absent" ? "not coming today" : "running late"}` });
+      },
+    });
+  };
+
+  const handleClearEmergency = (doctorId: number) => {
+    clearEmergency.mutate({ id: doctorId }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        toast({ title: "Emergency status cleared" });
+      },
+    });
   };
 
   return (
@@ -163,6 +203,22 @@ export default function Doctors() {
         </Dialog>
       </div>
 
+      {emergencies && emergencies.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <p className="font-semibold text-red-700">Today's Emergency Alerts</p>
+          </div>
+          <div className="space-y-1">
+            {emergencies.map((e) => (
+              <p key={e.id} className="text-sm text-red-600">
+                {e.doctorName} — {e.type === "absent" ? "Not coming today" : "Running late"}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
           [1, 2, 3].map(i => (
@@ -178,44 +234,100 @@ export default function Doctors() {
             <p className="text-sm text-muted-foreground">Add your first doctor to start scheduling.</p>
           </div>
         ) : (
-          doctors?.map(doctor => (
-            <Card key={doctor.id}>
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-xl">Dr. {doctor.name}</CardTitle>
-                    <CardDescription className="flex items-center mt-1 text-primary font-medium">
-                      <Stethoscope className="w-3.5 h-3.5 mr-1" />
-                      {doctor.specialization}
-                    </CardDescription>
+          doctors?.map(doctor => {
+            const emergency = emergencyMap.get(doctor.id);
+            return (
+              <Card key={doctor.id} className={emergency ? "border-red-200" : ""}>
+                <CardHeader className="pb-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-xl">{doctor.name}</CardTitle>
+                      <CardDescription className="flex items-center mt-1 text-primary font-medium">
+                        <Stethoscope className="w-3.5 h-3.5 mr-1" />
+                        {doctor.specialization}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={doctor.isActive ? "default" : "secondary"}>
+                      {doctor.isActive ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
-                  <Badge variant={doctor.isActive ? "default" : "secondary"}>
-                    {doctor.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <div className="flex items-center">
-                    <Phone className="w-4 h-4 mr-2" />
-                    {doctor.phone}
+                </CardHeader>
+                <CardContent>
+                  {emergency && (
+                    <div className={`rounded-lg px-3 py-2 mb-3 text-sm font-medium flex items-center justify-between ${
+                      emergency.type === "absent" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                    }`}>
+                      <span className="flex items-center gap-1.5">
+                        <AlertTriangle className="h-4 w-4" />
+                        {emergency.type === "absent" ? "Not coming today" : "Running late today"}
+                      </span>
+                      <button
+                        onClick={() => handleClearEmergency(doctor.id)}
+                        className="ml-2 hover:opacity-70"
+                        title="Clear emergency"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 mr-2" />
+                      {doctor.phone}
+                    </div>
+                    <div className="flex items-center">
+                      <Clock className="w-4 h-4 mr-2" />
+                      {doctor.workingHoursStart} - {doctor.workingHoursEnd} ({doctor.slotDurationMinutes}m slots)
+                    </div>
+
+                    {!emergency && (
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-amber-600 border-amber-200 hover:bg-amber-50"
+                          onClick={() => handleSetEmergency(doctor.id, "late")}
+                        >
+                          ⏱ Late
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => handleSetEmergency(doctor.id, "absent")}
+                        >
+                          🚫 Absent
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex space-x-2 border-t mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        onClick={() => copyPortalLink(doctor.portalToken)}
+                      >
+                        <Link2 className="w-4 h-4 mr-1" /> Portal Link
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(doctor)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(doctor.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-2" />
-                    {doctor.workingHoursStart} - {doctor.workingHoursEnd} ({doctor.slotDurationMinutes}m slots)
-                  </div>
-                  <div className="pt-4 flex space-x-2 border-t mt-4">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(doctor)}>
-                      <Pencil className="w-4 h-4 mr-2" /> Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1 text-destructive hover:text-destructive" onClick={() => handleDelete(doctor.id)}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>

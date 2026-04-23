@@ -18,13 +18,16 @@ tags:
     description: WhatsApp conversation management
   - name: dashboard
     description: Dashboard summaries
+  - name: reminders
+    description: Patient appointment reminders
+  - name: portal
+    description: Doctor self-service portal
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -64,6 +67,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Doctor"
+
+  /doctors/emergency-today:
+    get:
+      operationId: getDoctorEmergenciesToday
+      tags: [doctors]
+      summary: Get all doctor emergency statuses for today
+      responses:
+        "200":
+          description: Emergency statuses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DoctorEmergency"
+
+  /doctors/portal/{token}:
+    get:
+      operationId: getDoctorPortal
+      tags: [portal]
+      summary: Get doctor info and schedule via portal token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Doctor portal data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorPortalData"
+        "404":
+          description: Invalid token
 
   /doctors/{id}:
     get:
@@ -140,7 +179,6 @@ paths:
           required: true
           schema:
             type: string
-            description: Date in YYYY-MM-DD format
       responses:
         "200":
           description: Availability info per time slot
@@ -148,6 +186,84 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DoctorAvailability"
+
+  /doctors/{id}/emergency:
+    post:
+      operationId: setDoctorEmergency
+      tags: [doctors]
+      summary: Set emergency status for a doctor (late or absent today)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetEmergencyBody"
+      responses:
+        "200":
+          description: Emergency status set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorEmergency"
+    delete:
+      operationId: clearDoctorEmergency
+      tags: [doctors]
+      summary: Clear emergency status for today
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cleared
+
+  /doctors/portal/{token}/emergency:
+    post:
+      operationId: setDoctorEmergencyViaPortal
+      tags: [portal]
+      summary: Doctor sets their own emergency status via portal
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetEmergencyBody"
+      responses:
+        "200":
+          description: Emergency set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorEmergency"
+        "404":
+          description: Invalid token
+    delete:
+      operationId: clearDoctorEmergencyViaPortal
+      tags: [portal]
+      summary: Doctor clears their emergency status via portal
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Cleared
 
   /appointments:
     get:
@@ -257,6 +373,82 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /reminders:
+    get:
+      operationId: listReminders
+      tags: [reminders]
+      summary: List all appointment reminders
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of reminders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentReminder"
+    post:
+      operationId: createReminder
+      tags: [reminders]
+      summary: Schedule a reminder for an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReminderBody"
+      responses:
+        "201":
+          description: Reminder created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentReminder"
+
+  /reminders/{id}:
+    patch:
+      operationId: updateReminder
+      tags: [reminders]
+      summary: Update reminder status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReminderBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentReminder"
+
+  /reminders/generate-today:
+    post:
+      operationId: generateTodayReminders
+      tags: [reminders]
+      summary: Auto-generate reminders for all of today's appointments
+      responses:
+        "200":
+          description: Reminders generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateRemindersResponse"
 
   /conversations:
     get:
@@ -385,18 +577,16 @@ components:
           type: integer
         workingHoursStart:
           type: string
-          description: "Time in HH:MM format e.g. 09:00"
         workingHoursEnd:
           type: string
-          description: "Time in HH:MM format e.g. 17:00"
         slotDurationMinutes:
           type: integer
-          description: Duration of each appointment slot in minutes
         workingDays:
           type: string
-          description: Comma-separated weekday numbers (0=Sun, 1=Mon ... 6=Sat)
         isActive:
           type: boolean
+        portalToken:
+          type: string
         createdAt:
           type: string
       required:
@@ -410,6 +600,7 @@ components:
         - slotDurationMinutes
         - workingDays
         - isActive
+        - portalToken
         - createdAt
 
     CreateDoctorBody:
@@ -463,6 +654,60 @@ components:
         isActive:
           type: ["boolean", "null"]
 
+    DoctorEmergency:
+      type: object
+      properties:
+        id:
+          type: integer
+        doctorId:
+          type: integer
+        doctorName:
+          type: string
+        date:
+          type: string
+        type:
+          type: string
+          description: "late | absent"
+        message:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - doctorId
+        - doctorName
+        - date
+        - type
+        - createdAt
+
+    SetEmergencyBody:
+      type: object
+      properties:
+        type:
+          type: string
+          description: "late | absent"
+        message:
+          type: ["string", "null"]
+      required:
+        - type
+
+    DoctorPortalData:
+      type: object
+      properties:
+        doctor:
+          $ref: "#/components/schemas/Doctor"
+        todayAppointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        emergencyToday:
+          anyOf:
+            - $ref: "#/components/schemas/DoctorEmergency"
+            - type: "null"
+      required:
+        - doctor
+        - todayAppointments
+
     Appointment:
       type: object
       properties:
@@ -480,13 +725,10 @@ components:
           type: string
         appointmentDate:
           type: string
-          description: "YYYY-MM-DD"
         timeSlot:
           type: string
-          description: "HH:MM"
         status:
           type: string
-          description: "scheduled | confirmed | cancelled | completed"
         notes:
           type: ["string", "null"]
         createdAt:
@@ -514,10 +756,8 @@ components:
           type: integer
         appointmentDate:
           type: string
-          description: "YYYY-MM-DD"
         timeSlot:
           type: string
-          description: "HH:MM"
         notes:
           type: ["string", "null"]
       required:
@@ -560,7 +800,6 @@ components:
       properties:
         time:
           type: string
-          description: "HH:MM"
         bookedCount:
           type: integer
         maxCapacity:
@@ -572,6 +811,75 @@ components:
         - bookedCount
         - maxCapacity
         - isAvailable
+
+    AppointmentReminder:
+      type: object
+      properties:
+        id:
+          type: integer
+        appointmentId:
+          type: integer
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        doctorName:
+          type: string
+        appointmentDate:
+          type: string
+        timeSlot:
+          type: string
+        reminderMessage:
+          type: string
+        status:
+          type: string
+          description: "pending | sent | failed"
+        scheduledFor:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - appointmentId
+        - patientName
+        - patientPhone
+        - doctorName
+        - appointmentDate
+        - timeSlot
+        - reminderMessage
+        - status
+        - scheduledFor
+        - createdAt
+
+    CreateReminderBody:
+      type: object
+      properties:
+        appointmentId:
+          type: integer
+        reminderMinutesBefore:
+          type: integer
+          default: 60
+      required:
+        - appointmentId
+
+    UpdateReminderBody:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    GenerateRemindersResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+        skipped:
+          type: integer
+      required:
+        - created
+        - skipped
 
     WhatsAppConversation:
       type: object
@@ -590,7 +898,6 @@ components:
           type: integer
         status:
           type: string
-          description: "active | resolved"
         createdAt:
           type: string
       required:
@@ -633,7 +940,6 @@ components:
           type: integer
         role:
           type: string
-          description: "user | assistant"
         content:
           type: string
         createdAt:
@@ -650,10 +956,8 @@ components:
       properties:
         from:
           type: string
-          description: Sender phone number
         message:
           type: string
-          description: Incoming message text
       required:
         - from
         - message

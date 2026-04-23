@@ -8,7 +8,6 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -24,15 +23,12 @@ export const ListDoctorsResponseItem = zod.object({
   specialization: zod.string(),
   phone: zod.string(),
   maxPatientsPerSlot: zod.number(),
-  workingHoursStart: zod.string().describe("Time in HH:MM format e.g. 09:00"),
-  workingHoursEnd: zod.string().describe("Time in HH:MM format e.g. 17:00"),
-  slotDurationMinutes: zod
-    .number()
-    .describe("Duration of each appointment slot in minutes"),
-  workingDays: zod
-    .string()
-    .describe("Comma-separated weekday numbers (0=Sun, 1=Mon ... 6=Sat)"),
+  workingHoursStart: zod.string(),
+  workingHoursEnd: zod.string(),
+  slotDurationMinutes: zod.number(),
+  workingDays: zod.string(),
   isActive: zod.boolean(),
+  portalToken: zod.string(),
   createdAt: zod.string(),
 });
 export const ListDoctorsResponse = zod.array(ListDoctorsResponseItem);
@@ -64,6 +60,75 @@ export const CreateDoctorBody = zod.object({
 });
 
 /**
+ * @summary Get all doctor emergency statuses for today
+ */
+export const GetDoctorEmergenciesTodayResponseItem = zod.object({
+  id: zod.number(),
+  doctorId: zod.number(),
+  doctorName: zod.string(),
+  date: zod.string(),
+  type: zod.string().describe("late | absent"),
+  message: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetDoctorEmergenciesTodayResponse = zod.array(
+  GetDoctorEmergenciesTodayResponseItem,
+);
+
+/**
+ * @summary Get doctor info and schedule via portal token
+ */
+export const GetDoctorPortalParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const GetDoctorPortalResponse = zod.object({
+  doctor: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    specialization: zod.string(),
+    phone: zod.string(),
+    maxPatientsPerSlot: zod.number(),
+    workingHoursStart: zod.string(),
+    workingHoursEnd: zod.string(),
+    slotDurationMinutes: zod.number(),
+    workingDays: zod.string(),
+    isActive: zod.boolean(),
+    portalToken: zod.string(),
+    createdAt: zod.string(),
+  }),
+  todayAppointments: zod.array(
+    zod.object({
+      id: zod.number(),
+      patientName: zod.string(),
+      patientPhone: zod.string(),
+      doctorId: zod.number(),
+      doctorName: zod.string(),
+      doctorSpecialization: zod.string(),
+      appointmentDate: zod.string(),
+      timeSlot: zod.string(),
+      status: zod.string(),
+      notes: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+  emergencyToday: zod
+    .union([
+      zod.object({
+        id: zod.number(),
+        doctorId: zod.number(),
+        doctorName: zod.string(),
+        date: zod.string(),
+        type: zod.string().describe("late | absent"),
+        message: zod.string().nullish(),
+        createdAt: zod.string(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+});
+
+/**
  * @summary Get a doctor by ID
  */
 export const GetDoctorParams = zod.object({
@@ -76,15 +141,12 @@ export const GetDoctorResponse = zod.object({
   specialization: zod.string(),
   phone: zod.string(),
   maxPatientsPerSlot: zod.number(),
-  workingHoursStart: zod.string().describe("Time in HH:MM format e.g. 09:00"),
-  workingHoursEnd: zod.string().describe("Time in HH:MM format e.g. 17:00"),
-  slotDurationMinutes: zod
-    .number()
-    .describe("Duration of each appointment slot in minutes"),
-  workingDays: zod
-    .string()
-    .describe("Comma-separated weekday numbers (0=Sun, 1=Mon ... 6=Sat)"),
+  workingHoursStart: zod.string(),
+  workingHoursEnd: zod.string(),
+  slotDurationMinutes: zod.number(),
+  workingDays: zod.string(),
   isActive: zod.boolean(),
+  portalToken: zod.string(),
   createdAt: zod.string(),
 });
 
@@ -113,15 +175,12 @@ export const UpdateDoctorResponse = zod.object({
   specialization: zod.string(),
   phone: zod.string(),
   maxPatientsPerSlot: zod.number(),
-  workingHoursStart: zod.string().describe("Time in HH:MM format e.g. 09:00"),
-  workingHoursEnd: zod.string().describe("Time in HH:MM format e.g. 17:00"),
-  slotDurationMinutes: zod
-    .number()
-    .describe("Duration of each appointment slot in minutes"),
-  workingDays: zod
-    .string()
-    .describe("Comma-separated weekday numbers (0=Sun, 1=Mon ... 6=Sat)"),
+  workingHoursStart: zod.string(),
+  workingHoursEnd: zod.string(),
+  slotDurationMinutes: zod.number(),
+  workingDays: zod.string(),
   isActive: zod.boolean(),
+  portalToken: zod.string(),
   createdAt: zod.string(),
 });
 
@@ -148,12 +207,70 @@ export const GetDoctorAvailabilityResponse = zod.object({
   date: zod.string(),
   slots: zod.array(
     zod.object({
-      time: zod.string().describe("HH:MM"),
+      time: zod.string(),
       bookedCount: zod.number(),
       maxCapacity: zod.number(),
       isAvailable: zod.boolean(),
     }),
   ),
+});
+
+/**
+ * @summary Set emergency status for a doctor (late or absent today)
+ */
+export const SetDoctorEmergencyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SetDoctorEmergencyBody = zod.object({
+  type: zod.string().describe("late | absent"),
+  message: zod.string().nullish(),
+});
+
+export const SetDoctorEmergencyResponse = zod.object({
+  id: zod.number(),
+  doctorId: zod.number(),
+  doctorName: zod.string(),
+  date: zod.string(),
+  type: zod.string().describe("late | absent"),
+  message: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Clear emergency status for today
+ */
+export const ClearDoctorEmergencyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Doctor sets their own emergency status via portal
+ */
+export const SetDoctorEmergencyViaPortalParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const SetDoctorEmergencyViaPortalBody = zod.object({
+  type: zod.string().describe("late | absent"),
+  message: zod.string().nullish(),
+});
+
+export const SetDoctorEmergencyViaPortalResponse = zod.object({
+  id: zod.number(),
+  doctorId: zod.number(),
+  doctorName: zod.string(),
+  date: zod.string(),
+  type: zod.string().describe("late | absent"),
+  message: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Doctor clears their emergency status via portal
+ */
+export const ClearDoctorEmergencyViaPortalParams = zod.object({
+  token: zod.coerce.string(),
 });
 
 /**
@@ -172,11 +289,9 @@ export const ListAppointmentsResponseItem = zod.object({
   doctorId: zod.number(),
   doctorName: zod.string(),
   doctorSpecialization: zod.string(),
-  appointmentDate: zod.string().describe("YYYY-MM-DD"),
-  timeSlot: zod.string().describe("HH:MM"),
-  status: zod
-    .string()
-    .describe("scheduled | confirmed | cancelled | completed"),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
+  status: zod.string(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -189,8 +304,8 @@ export const CreateAppointmentBody = zod.object({
   patientName: zod.string(),
   patientPhone: zod.string(),
   doctorId: zod.number(),
-  appointmentDate: zod.string().describe("YYYY-MM-DD"),
-  timeSlot: zod.string().describe("HH:MM"),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
   notes: zod.string().nullish(),
 });
 
@@ -208,11 +323,9 @@ export const GetAppointmentResponse = zod.object({
   doctorId: zod.number(),
   doctorName: zod.string(),
   doctorSpecialization: zod.string(),
-  appointmentDate: zod.string().describe("YYYY-MM-DD"),
-  timeSlot: zod.string().describe("HH:MM"),
-  status: zod
-    .string()
-    .describe("scheduled | confirmed | cancelled | completed"),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
+  status: zod.string(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -238,11 +351,9 @@ export const UpdateAppointmentResponse = zod.object({
   doctorId: zod.number(),
   doctorName: zod.string(),
   doctorSpecialization: zod.string(),
-  appointmentDate: zod.string().describe("YYYY-MM-DD"),
-  timeSlot: zod.string().describe("HH:MM"),
-  status: zod
-    .string()
-    .describe("scheduled | confirmed | cancelled | completed"),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
+  status: zod.string(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -255,6 +366,73 @@ export const DeleteAppointmentParams = zod.object({
 });
 
 /**
+ * @summary List all appointment reminders
+ */
+export const ListRemindersQueryParams = zod.object({
+  status: zod.coerce.string().nullish(),
+});
+
+export const ListRemindersResponseItem = zod.object({
+  id: zod.number(),
+  appointmentId: zod.number(),
+  patientName: zod.string(),
+  patientPhone: zod.string(),
+  doctorName: zod.string(),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
+  reminderMessage: zod.string(),
+  status: zod.string().describe("pending | sent | failed"),
+  scheduledFor: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListRemindersResponse = zod.array(ListRemindersResponseItem);
+
+/**
+ * @summary Schedule a reminder for an appointment
+ */
+export const createReminderBodyReminderMinutesBeforeDefault = 60;
+
+export const CreateReminderBody = zod.object({
+  appointmentId: zod.number(),
+  reminderMinutesBefore: zod
+    .number()
+    .default(createReminderBodyReminderMinutesBeforeDefault),
+});
+
+/**
+ * @summary Update reminder status
+ */
+export const UpdateReminderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateReminderBody = zod.object({
+  status: zod.string(),
+});
+
+export const UpdateReminderResponse = zod.object({
+  id: zod.number(),
+  appointmentId: zod.number(),
+  patientName: zod.string(),
+  patientPhone: zod.string(),
+  doctorName: zod.string(),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
+  reminderMessage: zod.string(),
+  status: zod.string().describe("pending | sent | failed"),
+  scheduledFor: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Auto-generate reminders for all of today's appointments
+ */
+export const GenerateTodayRemindersResponse = zod.object({
+  created: zod.number(),
+  skipped: zod.number(),
+});
+
+/**
  * @summary List all WhatsApp conversations
  */
 export const ListConversationsResponseItem = zod.object({
@@ -264,7 +442,7 @@ export const ListConversationsResponseItem = zod.object({
   lastMessage: zod.string().nullish(),
   lastMessageAt: zod.string().nullish(),
   messageCount: zod.number(),
-  status: zod.string().describe("active | resolved"),
+  status: zod.string(),
   createdAt: zod.string(),
 });
 export const ListConversationsResponse = zod.array(
@@ -288,7 +466,7 @@ export const GetConversationResponse = zod.object({
     zod.object({
       id: zod.number(),
       conversationId: zod.number(),
-      role: zod.string().describe("user | assistant"),
+      role: zod.string(),
       content: zod.string(),
       createdAt: zod.string(),
     }),
@@ -299,8 +477,8 @@ export const GetConversationResponse = zod.object({
  * @summary Receive incoming WhatsApp message and process via AI agent
  */
 export const HandleWhatsappWebhookBody = zod.object({
-  from: zod.string().describe("Sender phone number"),
-  message: zod.string().describe("Incoming message text"),
+  from: zod.string(),
+  message: zod.string(),
 });
 
 export const HandleWhatsappWebhookResponse = zod.object({
@@ -344,11 +522,9 @@ export const GetTodayAppointmentsResponseItem = zod.object({
   doctorId: zod.number(),
   doctorName: zod.string(),
   doctorSpecialization: zod.string(),
-  appointmentDate: zod.string().describe("YYYY-MM-DD"),
-  timeSlot: zod.string().describe("HH:MM"),
-  status: zod
-    .string()
-    .describe("scheduled | confirmed | cancelled | completed"),
+  appointmentDate: zod.string(),
+  timeSlot: zod.string(),
+  status: zod.string(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });

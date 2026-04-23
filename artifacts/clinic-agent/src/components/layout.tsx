@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Calendar, MessageSquare, MessageCircleCode } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, MessageSquare, MessageCircleCode, Bell } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -8,6 +8,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/doctors", label: "Doctors", icon: Users },
     { href: "/appointments", label: "Appointments", icon: Calendar },
+    { href: "/reminders", label: "Reminders", icon: Bell },
     { href: "/conversations", label: "Conversations", icon: MessageSquare },
     { href: "/simulator", label: "Simulator", icon: MessageCircleCode },
   ];

@@ -20,13 +20,18 @@ A full-stack SaaS platform for hospitals and clinics. An AI agent (powered by GP
 
 ## Features
 
-1. **WhatsApp AI Agent** — Receives messages, understands natural language, extracts patient details, checks doctor availability, and books appointments
-2. **Availability Checking** — Agent checks slot capacity (max patients per time slot per doctor) before booking
-3. **Dashboard** — Real-time stats (doctors, today's appointments, weekly count, conversations)
-4. **Doctor Management** — Add/edit doctors, configure working hours, slot duration, and max patients per slot
-5. **Appointment Log** — Full appointment history with filter by doctor/date/status
-6. **Conversations** — WhatsApp conversation threads (full message history)
-7. **Simulator** — Test the AI agent in a WhatsApp-style chat interface
+1. **WhatsApp AI Agent** — Receives messages, understands natural language, extracts patient details, checks doctor availability, and books appointments. Replies in the patient's language (Hindi, Urdu, English, etc.)
+2. **Human-like AI Tone** — AI is named "Priya", speaks naturally like a WhatsApp chat, not robotic
+3. **Multi-language Support** — AI detects patient language and responds in the same language
+4. **Availability Checking** — Agent checks slot capacity (max patients per time slot per doctor) before booking
+5. **Emergency Status** — Doctors can mark themselves "Late" or "Absent" from their portal; AI stops booking them
+6. **Doctor Portal** — Each doctor has a unique mobile-friendly URL (no password needed). Shows today's schedule + big emergency buttons
+7. **Patient Reminders** — Staff can generate WhatsApp reminder messages for all today's appointments
+8. **Dashboard** — Real-time stats (doctors, today's appointments, weekly count, conversations)
+9. **Doctor Management** — Add/edit doctors, configure working hours, slot duration, and max patients per slot. See portal link + emergency controls per card
+10. **Appointment Log** — Full appointment history with filter by doctor/date/status
+11. **Conversations** — WhatsApp conversation threads (full message history)
+12. **Simulator** — Test the AI agent in a WhatsApp-style chat interface
 
 ## Architecture
 

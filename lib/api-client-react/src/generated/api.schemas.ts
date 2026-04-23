@@ -15,15 +15,12 @@ export interface Doctor {
   specialization: string;
   phone: string;
   maxPatientsPerSlot: number;
-  /** Time in HH:MM format e.g. 09:00 */
   workingHoursStart: string;
-  /** Time in HH:MM format e.g. 17:00 */
   workingHoursEnd: string;
-  /** Duration of each appointment slot in minutes */
   slotDurationMinutes: number;
-  /** Comma-separated weekday numbers (0=Sun, 1=Mon ... 6=Sat) */
   workingDays: string;
   isActive: boolean;
+  portalToken: string;
   createdAt: string;
 }
 
@@ -59,6 +56,25 @@ export interface UpdateDoctorBody {
   isActive?: boolean | null;
 }
 
+export interface DoctorEmergency {
+  id: number;
+  doctorId: number;
+  doctorName: string;
+  date: string;
+  /** late | absent */
+  type: string;
+  /** @nullable */
+  message?: string | null;
+  createdAt: string;
+}
+
+export interface SetEmergencyBody {
+  /** late | absent */
+  type: string;
+  /** @nullable */
+  message?: string | null;
+}
+
 export interface Appointment {
   id: number;
   patientName: string;
@@ -66,24 +82,25 @@ export interface Appointment {
   doctorId: number;
   doctorName: string;
   doctorSpecialization: string;
-  /** YYYY-MM-DD */
   appointmentDate: string;
-  /** HH:MM */
   timeSlot: string;
-  /** scheduled | confirmed | cancelled | completed */
   status: string;
   /** @nullable */
   notes?: string | null;
   createdAt: string;
 }
 
+export interface DoctorPortalData {
+  doctor: Doctor;
+  todayAppointments: Appointment[];
+  emergencyToday?: DoctorEmergency | null;
+}
+
 export interface CreateAppointmentBody {
   patientName: string;
   patientPhone: string;
   doctorId: number;
-  /** YYYY-MM-DD */
   appointmentDate: string;
-  /** HH:MM */
   timeSlot: string;
   /** @nullable */
   notes?: string | null;
@@ -101,7 +118,6 @@ export interface UpdateAppointmentBody {
 }
 
 export interface TimeSlot {
-  /** HH:MM */
   time: string;
   bookedCount: number;
   maxCapacity: number;
@@ -114,6 +130,35 @@ export interface DoctorAvailability {
   slots: TimeSlot[];
 }
 
+export interface AppointmentReminder {
+  id: number;
+  appointmentId: number;
+  patientName: string;
+  patientPhone: string;
+  doctorName: string;
+  appointmentDate: string;
+  timeSlot: string;
+  reminderMessage: string;
+  /** pending | sent | failed */
+  status: string;
+  scheduledFor: string;
+  createdAt: string;
+}
+
+export interface CreateReminderBody {
+  appointmentId: number;
+  reminderMinutesBefore?: number;
+}
+
+export interface UpdateReminderBody {
+  status: string;
+}
+
+export interface GenerateRemindersResponse {
+  created: number;
+  skipped: number;
+}
+
 export interface WhatsAppConversation {
   id: number;
   patientPhone: string;
@@ -124,7 +169,6 @@ export interface WhatsAppConversation {
   /** @nullable */
   lastMessageAt?: string | null;
   messageCount: number;
-  /** active | resolved */
   status: string;
   createdAt: string;
 }
@@ -132,7 +176,6 @@ export interface WhatsAppConversation {
 export interface WhatsAppMessage {
   id: number;
   conversationId: number;
-  /** user | assistant */
   role: string;
   content: string;
   createdAt: string;
@@ -149,9 +192,7 @@ export interface WhatsAppConversationWithMessages {
 }
 
 export interface WhatsappWebhookBody {
-  /** Sender phone number */
   from: string;
-  /** Incoming message text */
   message: string;
 }
 
@@ -182,9 +223,6 @@ export interface DashboardSummary {
 }
 
 export type GetDoctorAvailabilityParams = {
-  /**
-   * Date in YYYY-MM-DD format
-   */
   date: string;
 };
 
@@ -197,6 +235,13 @@ export type ListAppointmentsParams = {
    * @nullable
    */
   date?: string | null;
+  /**
+   * @nullable
+   */
+  status?: string | null;
+};
+
+export type ListRemindersParams = {
   /**
    * @nullable
    */
