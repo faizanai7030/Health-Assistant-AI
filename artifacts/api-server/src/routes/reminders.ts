@@ -43,7 +43,7 @@ router.post("/reminders", async (req, res) => {
   const apptDateTime = new Date(`${appt.appointmentDate}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
   const scheduledFor = new Date(apptDateTime.getTime() - reminderMinutesBefore * 60 * 1000);
 
-  const reminderMessage = `Reminder: Your appointment with ${appt.doctorName} is scheduled for ${appt.appointmentDate} at ${appt.timeSlot}. Please arrive 10 minutes early.`;
+  const reminderMessage = `Dear ${appt.patientName}, this is a reminder that your appointment with ${appt.doctorName} is scheduled for ${appt.appointmentDate} at ${appt.timeSlot}. Please arrive 10 minutes early.`;
 
   const [row] = await db.insert(appointmentRemindersTable).values({
     appointmentId,
@@ -115,7 +115,7 @@ router.post("/reminders/generate-today", async (req, res) => {
     const apptDateTime = new Date(`${appt.appointmentDate}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
     const scheduledFor = new Date(apptDateTime.getTime() - 60 * 60 * 1000);
 
-    const reminderMessage = `Reminder: Your appointment with ${appt.doctorName} is scheduled today at ${appt.timeSlot}. Please arrive 10 minutes early.`;
+    const reminderMessage = `Dear ${appt.patientName}, this is a reminder that your appointment with ${appt.doctorName} is scheduled today at ${appt.timeSlot}. Please arrive 10 minutes early.`;
 
     await db.insert(appointmentRemindersTable).values({
       appointmentId: appt.id,

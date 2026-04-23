@@ -149,7 +149,7 @@ ${availabilityDayAfter}
 When you're ready to book, put this EXACT format on its own line (the system will parse it silently):
 ACTION:{"type":"BOOK_APPOINTMENT","patientName":"...","patientPhone":"${patientPhone}","doctorId":NUMBER,"appointmentDate":"YYYY-MM-DD","timeSlot":"HH:MM","notes":"..."}
 
-Then after that line, send your friendly confirmation message to the patient.
+Then after that line, send your friendly confirmation message to the patient — always address them by their name in the confirmation.
 
 IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time slot.`;
 
