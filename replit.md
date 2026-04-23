@@ -1,8 +1,8 @@
-# Workspace
+# Clinic WhatsApp AI Agent
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+A full-stack SaaS platform for hospitals and clinics. An AI agent (powered by GPT) attends WhatsApp messages, books appointments, checks doctor availability and slot capacity limits, and maintains a complete appointment record.
 
 ## Stack
 
@@ -15,6 +15,35 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
+- **AI**: OpenAI GPT-5.4 via Replit AI Integrations
+
+## Features
+
+1. **WhatsApp AI Agent** — Receives messages, understands natural language, extracts patient details, checks doctor availability, and books appointments
+2. **Availability Checking** — Agent checks slot capacity (max patients per time slot per doctor) before booking
+3. **Dashboard** — Real-time stats (doctors, today's appointments, weekly count, conversations)
+4. **Doctor Management** — Add/edit doctors, configure working hours, slot duration, and max patients per slot
+5. **Appointment Log** — Full appointment history with filter by doctor/date/status
+6. **Conversations** — WhatsApp conversation threads (full message history)
+7. **Simulator** — Test the AI agent in a WhatsApp-style chat interface
+
+## Architecture
+
+- `artifacts/api-server` — Express 5 backend (doctors, appointments, conversations, dashboard routes)
+- `artifacts/clinic-agent` — React + Vite frontend dashboard
+- `lib/api-spec/openapi.yaml` — OpenAPI contract (source of truth)
+- `lib/api-client-react` — Generated React Query hooks
+- `lib/api-zod` — Generated Zod validation schemas
+- `lib/db` — Drizzle ORM schema and DB client
+- `lib/integrations-openai-ai-server` — OpenAI SDK client
+
+## DB Tables
+
+- `doctors` — Doctor records with schedule config
+- `appointments` — Patient appointments
+- `whatsapp_conversations` — Per-patient conversation records
+- `whatsapp_messages` — Individual messages (user/assistant)
 
 ## Key Commands
 
@@ -24,4 +53,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## WhatsApp Integration
+
+The `/api/conversations/webhook` endpoint accepts `{ from, message }` and can be connected to WhatsApp Business API (via Twilio, Meta Cloud API, etc.). The AI agent processes messages, checks availability, and books appointments automatically.
+
+The `/api/conversations/simulate` endpoint lets you test the agent from the built-in Simulator page.

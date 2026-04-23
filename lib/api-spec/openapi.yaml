@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Clinic WhatsApp AI Agent API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: doctors
+    description: Doctor management
+  - name: appointments
+    description: Appointment management
+  - name: conversations
+    description: WhatsApp conversation management
+  - name: dashboard
+    description: Dashboard summaries
 paths:
   /healthz:
     get:
@@ -24,6 +32,334 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /doctors:
+    get:
+      operationId: listDoctors
+      tags: [doctors]
+      summary: List all doctors
+      responses:
+        "200":
+          description: List of doctors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Doctor"
+    post:
+      operationId: createDoctor
+      tags: [doctors]
+      summary: Create a new doctor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDoctorBody"
+      responses:
+        "201":
+          description: Doctor created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+
+  /doctors/{id}:
+    get:
+      operationId: getDoctor
+      tags: [doctors]
+      summary: Get a doctor by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Doctor found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDoctor
+      tags: [doctors]
+      summary: Update a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDoctorBody"
+      responses:
+        "200":
+          description: Doctor updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDoctor
+      tags: [doctors]
+      summary: Delete a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /doctors/{id}/availability:
+    get:
+      operationId: getDoctorAvailability
+      tags: [doctors]
+      summary: Get doctor availability for a specific date
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Date in YYYY-MM-DD format
+      responses:
+        "200":
+          description: Availability info per time slot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorAvailability"
+
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - name: doctorId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create a new appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentBody"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Slot full or invalid data
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get an appointment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentBody"
+      responses:
+        "200":
+          description: Appointment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Cancel/delete an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [conversations]
+      summary: List all WhatsApp conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhatsAppConversation"
+
+  /conversations/{id}:
+    get:
+      operationId: getConversation
+      tags: [conversations]
+      summary: Get a conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppConversationWithMessages"
+        "404":
+          description: Not found
+
+  /conversations/webhook:
+    post:
+      operationId: handleWhatsappWebhook
+      tags: [conversations]
+      summary: Receive incoming WhatsApp message and process via AI agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappWebhookBody"
+      responses:
+        "200":
+          description: AI response sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappWebhookResponse"
+
+  /conversations/simulate:
+    post:
+      operationId: simulateWhatsappMessage
+      tags: [conversations]
+      summary: Simulate a WhatsApp message for testing in the dashboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateMessageBody"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulateMessageResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/today:
+    get:
+      operationId: getTodayAppointments
+      tags: [dashboard]
+      summary: Get today's appointments with doctor info
+      responses:
+        "200":
+          description: Today's appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +370,348 @@ components:
       required:
         - status
 
+    Doctor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        specialization:
+          type: string
+        phone:
+          type: string
+        maxPatientsPerSlot:
+          type: integer
+        workingHoursStart:
+          type: string
+          description: "Time in HH:MM format e.g. 09:00"
+        workingHoursEnd:
+          type: string
+          description: "Time in HH:MM format e.g. 17:00"
+        slotDurationMinutes:
+          type: integer
+          description: Duration of each appointment slot in minutes
+        workingDays:
+          type: string
+          description: Comma-separated weekday numbers (0=Sun, 1=Mon ... 6=Sat)
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - specialization
+        - phone
+        - maxPatientsPerSlot
+        - workingHoursStart
+        - workingHoursEnd
+        - slotDurationMinutes
+        - workingDays
+        - isActive
+        - createdAt
+
+    CreateDoctorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        specialization:
+          type: string
+        phone:
+          type: string
+        maxPatientsPerSlot:
+          type: integer
+          default: 3
+        workingHoursStart:
+          type: string
+          default: "09:00"
+        workingHoursEnd:
+          type: string
+          default: "17:00"
+        slotDurationMinutes:
+          type: integer
+          default: 30
+        workingDays:
+          type: string
+          default: "1,2,3,4,5"
+      required:
+        - name
+        - specialization
+        - phone
+
+    UpdateDoctorBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        specialization:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        maxPatientsPerSlot:
+          type: ["integer", "null"]
+        workingHoursStart:
+          type: ["string", "null"]
+        workingHoursEnd:
+          type: ["string", "null"]
+        slotDurationMinutes:
+          type: ["integer", "null"]
+        workingDays:
+          type: ["string", "null"]
+        isActive:
+          type: ["boolean", "null"]
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        doctorId:
+          type: integer
+        doctorName:
+          type: string
+        doctorSpecialization:
+          type: string
+        appointmentDate:
+          type: string
+          description: "YYYY-MM-DD"
+        timeSlot:
+          type: string
+          description: "HH:MM"
+        status:
+          type: string
+          description: "scheduled | confirmed | cancelled | completed"
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - patientName
+        - patientPhone
+        - doctorId
+        - doctorName
+        - doctorSpecialization
+        - appointmentDate
+        - timeSlot
+        - status
+        - createdAt
+
+    CreateAppointmentBody:
+      type: object
+      properties:
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        doctorId:
+          type: integer
+        appointmentDate:
+          type: string
+          description: "YYYY-MM-DD"
+        timeSlot:
+          type: string
+          description: "HH:MM"
+        notes:
+          type: ["string", "null"]
+      required:
+        - patientName
+        - patientPhone
+        - doctorId
+        - appointmentDate
+        - timeSlot
+
+    UpdateAppointmentBody:
+      type: object
+      properties:
+        status:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        timeSlot:
+          type: ["string", "null"]
+        appointmentDate:
+          type: ["string", "null"]
+
+    DoctorAvailability:
+      type: object
+      properties:
+        doctorId:
+          type: integer
+        date:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSlot"
+      required:
+        - doctorId
+        - date
+        - slots
+
+    TimeSlot:
+      type: object
+      properties:
+        time:
+          type: string
+          description: "HH:MM"
+        bookedCount:
+          type: integer
+        maxCapacity:
+          type: integer
+        isAvailable:
+          type: boolean
+      required:
+        - time
+        - bookedCount
+        - maxCapacity
+        - isAvailable
+
+    WhatsAppConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientPhone:
+          type: string
+        patientName:
+          type: ["string", "null"]
+        lastMessage:
+          type: ["string", "null"]
+        lastMessageAt:
+          type: ["string", "null"]
+        messageCount:
+          type: integer
+        status:
+          type: string
+          description: "active | resolved"
+        createdAt:
+          type: string
+      required:
+        - id
+        - patientPhone
+        - messageCount
+        - status
+        - createdAt
+
+    WhatsAppConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientPhone:
+          type: string
+        patientName:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/WhatsAppMessage"
+      required:
+        - id
+        - patientPhone
+        - status
+        - createdAt
+        - messages
+
+    WhatsAppMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+          description: "user | assistant"
+        content:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    WhatsappWebhookBody:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Sender phone number
+        message:
+          type: string
+          description: Incoming message text
+      required:
+        - from
+        - message
+
+    WhatsappWebhookResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        conversationId:
+          type: integer
+      required:
+        - response
+        - conversationId
+
+    SimulateMessageBody:
+      type: object
+      properties:
+        patientPhone:
+          type: string
+        message:
+          type: string
+      required:
+        - patientPhone
+        - message
+
+    SimulateMessageResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        conversationId:
+          type: integer
+        appointmentBooked:
+          type: ["boolean", "null"]
+      required:
+        - response
+        - conversationId
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalDoctors:
+          type: integer
+        totalAppointmentsToday:
+          type: integer
+        totalAppointmentsThisWeek:
+          type: integer
+        totalConversations:
+          type: integer
+        pendingAppointments:
+          type: integer
+        completedToday:
+          type: integer
+      required:
+        - totalDoctors
+        - totalAppointmentsToday
+        - totalAppointmentsThisWeek
+        - totalConversations
+        - pendingAppointments
+        - completedToday
