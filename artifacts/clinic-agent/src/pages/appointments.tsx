@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useListAppointments, getListAppointmentsQueryKey, useUpdateAppointment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { format, parseISO } from "date-fns";
 export default function Appointments() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [selectedDoctor, setSelectedDoctor] = useState<string>("all");
 
   const { data: appointments, isLoading } = useListAppointments({
     query: { queryKey: getListAppointmentsQueryKey() }
@@ -37,23 +39,67 @@ export default function Appointments() {
     }
   };
 
+  const doctors = appointments
+    ? Array.from(new Map(appointments.map((a) => [a.doctorName, a.doctorSpecialization])).entries())
+    : [];
+
+  const filtered = selectedDoctor === "all"
+    ? appointments
+    : appointments?.filter((a) => a.doctorName === selectedDoctor);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Appointments</h1>
-        <p className="text-muted-foreground mt-1">Full log of all clinic appointments with patient token numbers.</p>
+        <p className="text-muted-foreground mt-1">Filter by doctor to see their individual appointment list.</p>
       </div>
+
+      {!isLoading && doctors.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedDoctor("all")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+              selectedDoctor === "all"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-white text-muted-foreground border-border hover:border-primary hover:text-primary"
+            }`}
+          >
+            All Doctors
+            <span className="ml-2 text-xs opacity-70">({appointments?.length ?? 0})</span>
+          </button>
+          {doctors.map(([name, spec]) => {
+            const count = appointments?.filter((a) => a.doctorName === name).length ?? 0;
+            return (
+              <button
+                key={name}
+                onClick={() => setSelectedDoctor(name)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+                  selectedDoctor === name
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-white text-muted-foreground border-border hover:border-primary hover:text-primary"
+                }`}
+              >
+                {name}
+                <span className="ml-1 text-xs opacity-70">· {spec}</span>
+                <span className="ml-2 text-xs opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>All Appointments</CardTitle>
+          <CardTitle>
+            {selectedDoctor === "all" ? "All Appointments" : `${selectedDoctor}'s Appointments`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
-          ) : appointments?.length === 0 ? (
+          ) : filtered?.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="mx-auto h-12 w-12 opacity-20 mb-4" />
               <p>No appointments found.</p>
@@ -66,13 +112,15 @@ export default function Appointments() {
                     <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-16">Token</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Date & Time</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Patient</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Doctor</th>
+                    {selectedDoctor === "all" && (
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Doctor</th>
+                    )}
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-0">
-                  {appointments?.map((apt) => (
+                  {filtered?.map((apt) => (
                     <tr key={apt.id} className="border-b transition-colors hover:bg-muted/50">
                       <td className="p-4 align-middle text-center">
                         {apt.tokenNumber != null ? (
@@ -95,17 +143,19 @@ export default function Appointments() {
                         <div className="font-medium">{apt.patientName}</div>
                         <div className="text-xs text-muted-foreground">{apt.patientPhone}</div>
                       </td>
-                      <td className="p-4 align-middle">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                            {apt.doctorName.charAt(0)}
+                      {selectedDoctor === "all" && (
+                        <td className="p-4 align-middle">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                              {apt.doctorName.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-medium">{apt.doctorName}</div>
+                              <div className="text-[10px] text-muted-foreground">{apt.doctorSpecialization}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">{apt.doctorName}</div>
-                            <div className="text-[10px] text-muted-foreground">{apt.doctorSpecialization}</div>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
                       <td className="p-4 align-middle">
                         <Badge variant="outline" className={getStatusColor(apt.status)}>
                           {apt.status}
