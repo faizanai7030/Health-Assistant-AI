@@ -100,6 +100,12 @@ export const GetDoctorPortalResponse = zod.object({
   todayAppointments: zod.array(
     zod.object({
       id: zod.number(),
+      tokenNumber: zod
+        .number()
+        .nullish()
+        .describe(
+          "Patient's queue number for this doctor on this date (1, 2, 3...)",
+        ),
       patientName: zod.string(),
       patientPhone: zod.string(),
       doctorId: zod.number(),
@@ -284,6 +290,12 @@ export const ListAppointmentsQueryParams = zod.object({
 
 export const ListAppointmentsResponseItem = zod.object({
   id: zod.number(),
+  tokenNumber: zod
+    .number()
+    .nullish()
+    .describe(
+      "Patient's queue number for this doctor on this date (1, 2, 3...)",
+    ),
   patientName: zod.string(),
   patientPhone: zod.string(),
   doctorId: zod.number(),
@@ -318,6 +330,12 @@ export const GetAppointmentParams = zod.object({
 
 export const GetAppointmentResponse = zod.object({
   id: zod.number(),
+  tokenNumber: zod
+    .number()
+    .nullish()
+    .describe(
+      "Patient's queue number for this doctor on this date (1, 2, 3...)",
+    ),
   patientName: zod.string(),
   patientPhone: zod.string(),
   doctorId: zod.number(),
@@ -346,6 +364,12 @@ export const UpdateAppointmentBody = zod.object({
 
 export const UpdateAppointmentResponse = zod.object({
   id: zod.number(),
+  tokenNumber: zod
+    .number()
+    .nullish()
+    .describe(
+      "Patient's queue number for this doctor on this date (1, 2, 3...)",
+    ),
   patientName: zod.string(),
   patientPhone: zod.string(),
   doctorId: zod.number(),
@@ -517,6 +541,12 @@ export const GetDashboardSummaryResponse = zod.object({
  */
 export const GetTodayAppointmentsResponseItem = zod.object({
   id: zod.number(),
+  tokenNumber: zod
+    .number()
+    .nullish()
+    .describe(
+      "Patient's queue number for this doctor on this date (1, 2, 3...)",
+    ),
   patientName: zod.string(),
   patientPhone: zod.string(),
   doctorId: zod.number(),

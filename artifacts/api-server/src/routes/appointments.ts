@@ -15,6 +15,7 @@ const router: IRouter = Router();
 function formatAppointment(a: typeof appointmentsTable.$inferSelect, doctor: typeof doctorsTable.$inferSelect) {
   return {
     id: a.id,
+    tokenNumber: a.tokenNumber ?? null,
     patientName: a.patientName,
     patientPhone: a.patientPhone,
     doctorId: a.doctorId,
@@ -26,6 +27,20 @@ function formatAppointment(a: typeof appointmentsTable.$inferSelect, doctor: typ
     notes: a.notes,
     createdAt: a.createdAt.toISOString(),
   };
+}
+
+async function assignTokenNumber(doctorId: number, date: string): Promise<number> {
+  const result = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(appointmentsTable)
+    .where(
+      and(
+        eq(appointmentsTable.doctorId, doctorId),
+        eq(appointmentsTable.appointmentDate, date),
+        sql`${appointmentsTable.status} != 'cancelled'`
+      )
+    );
+  return (result[0]?.count ?? 0) + 1;
 }
 
 router.get("/appointments", async (req, res): Promise<void> => {
@@ -50,6 +65,7 @@ router.get("/appointments", async (req, res): Promise<void> => {
   res.json(
     appointments.map((row) => ({
       id: row.appointments.id,
+      tokenNumber: row.appointments.tokenNumber ?? null,
       patientName: row.appointments.patientName,
       patientPhone: row.appointments.patientPhone,
       doctorId: row.appointments.doctorId,
@@ -94,7 +110,13 @@ router.post("/appointments", async (req, res): Promise<void> => {
     return;
   }
 
-  const [appointment] = await db.insert(appointmentsTable).values(parsed.data).returning();
+  const tokenNumber = await assignTokenNumber(parsed.data.doctorId, parsed.data.appointmentDate);
+
+  const [appointment] = await db
+    .insert(appointmentsTable)
+    .values({ ...parsed.data, tokenNumber })
+    .returning();
+
   res.status(201).json(formatAppointment(appointment, doctor));
 });
 
@@ -117,6 +139,7 @@ router.get("/appointments/:id", async (req, res): Promise<void> => {
   const { appointments: a, doctors: d } = row[0];
   res.json({
     id: a.id,
+    tokenNumber: a.tokenNumber ?? null,
     patientName: a.patientName,
     patientPhone: a.patientPhone,
     doctorId: a.doctorId,
@@ -165,6 +188,7 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
   const { doctors: d } = rowsBefore[0];
   res.json({
     id: appointment.id,
+    tokenNumber: appointment.tokenNumber ?? null,
     patientName: appointment.patientName,
     patientPhone: appointment.patientPhone,
     doctorId: appointment.doctorId,

@@ -168,6 +168,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
   const rawReply = response.choices[0]?.message?.content ?? "Sorry, I couldn't process that. Could you try again? 🙏";
 
   let appointmentBooked = false;
+  let bookedTokenNumber: number | null = null;
 
   if (rawReply.includes("ACTION:")) {
     const actionLine = rawReply.split("\n").find((l) => l.startsWith("ACTION:"));
@@ -192,6 +193,18 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
           const currentCount = conflictCheck[0]?.count ?? 0;
 
           if (doctor && currentCount < doctor.maxPatientsPerSlot) {
+            const tokenCountResult = await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(appointmentsTable)
+              .where(
+                and(
+                  eq(appointmentsTable.doctorId, action.doctorId),
+                  eq(appointmentsTable.appointmentDate, action.appointmentDate),
+                  sql`${appointmentsTable.status} != 'cancelled'`
+                )
+              );
+            const tokenNumber = (tokenCountResult[0]?.count ?? 0) + 1;
+
             await db.insert(appointmentsTable).values({
               patientName: action.patientName,
               patientPhone: action.patientPhone,
@@ -200,7 +213,9 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
               timeSlot: action.timeSlot,
               status: "scheduled",
               notes: action.notes ?? null,
+              tokenNumber,
             });
+            bookedTokenNumber = tokenNumber;
             appointmentBooked = true;
             logger.info({ action }, "Appointment booked via AI agent");
           } else {
@@ -213,11 +228,15 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
     }
   }
 
-  const cleanReply = rawReply
+  let cleanReply = rawReply
     .split("\n")
     .filter((l) => !l.startsWith("ACTION:"))
     .join("\n")
     .trim();
+
+  if (appointmentBooked && bookedTokenNumber !== null) {
+    cleanReply += `\n\n🎫 *Your Token Number: ${bookedTokenNumber}*\nPlease show this number when you arrive at the clinic.`;
+  }
 
   return { reply: cleanReply, appointmentBooked };
 }

@@ -1,11 +1,10 @@
-import { useListAppointments, getListAppointmentsQueryKey, useUpdateAppointment, useGetDoctorAvailability } from "@workspace/api-client-react";
+import { useListAppointments, getListAppointmentsQueryKey, useUpdateAppointment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, User } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 
@@ -42,7 +41,7 @@ export default function Appointments() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Appointments</h1>
-        <p className="text-muted-foreground mt-1">Full log of all clinic appointments.</p>
+        <p className="text-muted-foreground mt-1">Full log of all clinic appointments with patient token numbers.</p>
       </div>
 
       <Card>
@@ -64,6 +63,7 @@ export default function Appointments() {
               <table className="w-full caption-bottom text-sm">
                 <thead className="[&_tr]:border-b">
                   <tr className="border-b transition-colors">
+                    <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-16">Token</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Date & Time</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Patient</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Doctor</th>
@@ -74,6 +74,17 @@ export default function Appointments() {
                 <tbody className="[&_tr:last-child]:border-0">
                   {appointments?.map((apt) => (
                     <tr key={apt.id} className="border-b transition-colors hover:bg-muted/50">
+                      <td className="p-4 align-middle text-center">
+                        {apt.tokenNumber != null ? (
+                          <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                            {apt.tokenNumber}
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-muted text-muted-foreground text-xs">
+                            —
+                          </div>
+                        )}
+                      </td>
                       <td className="p-4 align-middle">
                         <div className="font-medium">{format(parseISO(apt.appointmentDate), "MMM d, yyyy")}</div>
                         <div className="text-xs text-muted-foreground flex items-center mt-1">
@@ -101,8 +112,8 @@ export default function Appointments() {
                         </Badge>
                       </td>
                       <td className="p-4 align-middle">
-                        <Select 
-                          value={apt.status} 
+                        <Select
+                          value={apt.status}
                           onValueChange={(val) => handleStatusChange(apt.id, val)}
                         >
                           <SelectTrigger className="w-[130px] h-8 text-xs">

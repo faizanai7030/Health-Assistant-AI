@@ -77,6 +77,11 @@ export interface SetEmergencyBody {
 
 export interface Appointment {
   id: number;
+  /**
+   * Patient's queue number for this doctor on this date (1, 2, 3...)
+   * @nullable
+   */
+  tokenNumber?: number | null;
   patientName: string;
   patientPhone: string;
   doctorId: number;

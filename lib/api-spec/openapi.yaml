@@ -713,6 +713,9 @@ components:
       properties:
         id:
           type: integer
+        tokenNumber:
+          type: ["integer", "null"]
+          description: Patient's queue number for this doctor on this date (1, 2, 3...)
         patientName:
           type: string
         patientPhone:

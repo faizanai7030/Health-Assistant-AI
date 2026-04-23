@@ -181,12 +181,17 @@ export default function DoctorPortal() {
               {todayAppointments.map((appt) => (
                 <div
                   key={appt.id}
-                  className={`bg-white rounded-2xl border p-4 flex items-center gap-4 ${
+                  className={`bg-white rounded-2xl border p-4 flex items-center gap-3 ${
                     appt.status === "cancelled" ? "opacity-50" : ""
                   }`}
                 >
-                  <div className="h-10 w-16 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                    <span className="text-blue-700 font-bold text-sm">{appt.timeSlot}</span>
+                  <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 shadow">
+                    <span className="text-white font-bold text-sm">
+                      {appt.tokenNumber != null ? appt.tokenNumber : "—"}
+                    </span>
+                  </div>
+                  <div className="h-10 w-14 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                    <span className="text-blue-700 font-bold text-xs">{appt.timeSlot}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 truncate">{appt.patientName}</p>
