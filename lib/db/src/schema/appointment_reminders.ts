@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const appointmentRemindersTable = pgTable("appointment_reminders", {
   id: serial("id").primaryKey(),
+  clinicId: integer("clinic_id"),
   appointmentId: integer("appointment_id").notNull(),
   patientName: text("patient_name").notNull(),
   patientPhone: text("patient_phone").notNull(),

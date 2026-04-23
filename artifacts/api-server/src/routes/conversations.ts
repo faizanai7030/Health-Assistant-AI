@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db, whatsappConversationsTable, whatsappMessagesTable } from "@workspace/db";
 import {
   GetConversationParams,
@@ -10,11 +10,11 @@ import { processWhatsAppMessage } from "../lib/agent";
 
 const router: IRouter = Router();
 
-async function getOrCreateConversation(patientPhone: string, patientName?: string) {
+async function getOrCreateConversation(clinicId: number, patientPhone: string, patientName?: string) {
   const existing = await db
     .select()
     .from(whatsappConversationsTable)
-    .where(eq(whatsappConversationsTable.patientPhone, patientPhone));
+    .where(and(eq(whatsappConversationsTable.clinicId, clinicId), eq(whatsappConversationsTable.patientPhone, patientPhone)));
 
   if (existing[0]) {
     if (patientName && !existing[0].patientName) {
@@ -30,12 +30,13 @@ async function getOrCreateConversation(patientPhone: string, patientName?: strin
 
   const [conv] = await db
     .insert(whatsappConversationsTable)
-    .values({ patientPhone, patientName: patientName ?? null })
+    .values({ clinicId, patientPhone, patientName: patientName ?? null })
     .returning();
   return conv;
 }
 
-router.get("/conversations", async (_req, res): Promise<void> => {
+router.get("/conversations", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const conversations = await db
     .select({
       id: whatsappConversationsTable.id,
@@ -49,6 +50,7 @@ router.get("/conversations", async (_req, res): Promise<void> => {
     })
     .from(whatsappConversationsTable)
     .leftJoin(whatsappMessagesTable, eq(whatsappMessagesTable.conversationId, whatsappConversationsTable.id))
+    .where(eq(whatsappConversationsTable.clinicId, clinicId))
     .groupBy(whatsappConversationsTable.id)
     .orderBy(desc(whatsappConversationsTable.updatedAt));
 
@@ -100,6 +102,7 @@ router.get("/conversations/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/conversations/webhook", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const parsed = HandleWhatsappWebhookBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -107,7 +110,7 @@ router.post("/conversations/webhook", async (req, res): Promise<void> => {
   }
 
   const { from: patientPhone, message } = parsed.data;
-  const conv = await getOrCreateConversation(patientPhone);
+  const conv = await getOrCreateConversation(clinicId, patientPhone);
 
   const history = await db
     .select()
@@ -122,6 +125,7 @@ router.post("/conversations/webhook", async (req, res): Promise<void> => {
   });
 
   const { reply, appointmentBooked } = await processWhatsAppMessage(
+    clinicId,
     patientPhone,
     message,
     history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
@@ -144,6 +148,7 @@ router.post("/conversations/webhook", async (req, res): Promise<void> => {
 });
 
 router.post("/conversations/simulate", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const parsed = SimulateWhatsappMessageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -151,7 +156,7 @@ router.post("/conversations/simulate", async (req, res): Promise<void> => {
   }
 
   const { patientPhone, message } = parsed.data;
-  const conv = await getOrCreateConversation(patientPhone);
+  const conv = await getOrCreateConversation(clinicId, patientPhone);
 
   const history = await db
     .select()
@@ -166,6 +171,7 @@ router.post("/conversations/simulate", async (req, res): Promise<void> => {
   });
 
   const { reply, appointmentBooked } = await processWhatsAppMessage(
+    clinicId,
     patientPhone,
     message,
     history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))

@@ -4,30 +4,33 @@ import { db, appointmentsTable, doctorsTable, whatsappConversationsTable, whatsa
 
 const router: IRouter = Router();
 
-router.get("/dashboard/summary", async (_req, res): Promise<void> => {
+router.get("/dashboard/summary", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const today = new Date().toISOString().split("T")[0];
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   const weekStartStr = weekStart.toISOString().split("T")[0];
 
-  const [doctorCount] = await db.select({ count: sql<number>`count(*)::int` }).from(doctorsTable).where(eq(doctorsTable.isActive, true));
+  const [doctorCount] = await db.select({ count: sql<number>`count(*)::int` }).from(doctorsTable)
+    .where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true)));
   const [todayCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(appointmentsTable)
-    .where(and(eq(appointmentsTable.appointmentDate, today), sql`${appointmentsTable.status} != 'cancelled'`));
+    .where(and(eq(appointmentsTable.clinicId, clinicId), eq(appointmentsTable.appointmentDate, today), sql`${appointmentsTable.status} != 'cancelled'`));
   const [weekCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(appointmentsTable)
-    .where(and(sql`${appointmentsTable.appointmentDate} >= ${weekStartStr}`, sql`${appointmentsTable.status} != 'cancelled'`));
-  const [convCount] = await db.select({ count: sql<number>`count(*)::int` }).from(whatsappConversationsTable);
+    .where(and(eq(appointmentsTable.clinicId, clinicId), sql`${appointmentsTable.appointmentDate} >= ${weekStartStr}`, sql`${appointmentsTable.status} != 'cancelled'`));
+  const [convCount] = await db.select({ count: sql<number>`count(*)::int` }).from(whatsappConversationsTable)
+    .where(eq(whatsappConversationsTable.clinicId, clinicId));
   const [pendingCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(appointmentsTable)
-    .where(eq(appointmentsTable.status, "scheduled"));
+    .where(and(eq(appointmentsTable.clinicId, clinicId), eq(appointmentsTable.status, "scheduled")));
   const [completedCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(appointmentsTable)
-    .where(and(eq(appointmentsTable.appointmentDate, today), eq(appointmentsTable.status, "completed")));
+    .where(and(eq(appointmentsTable.clinicId, clinicId), eq(appointmentsTable.appointmentDate, today), eq(appointmentsTable.status, "completed")));
 
   res.json({
     totalDoctors: doctorCount?.count ?? 0,
@@ -39,13 +42,14 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   });
 });
 
-router.get("/dashboard/today", async (_req, res): Promise<void> => {
+router.get("/dashboard/today", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const today = new Date().toISOString().split("T")[0];
   const rows = await db
     .select()
     .from(appointmentsTable)
     .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
-    .where(and(eq(appointmentsTable.appointmentDate, today), sql`${appointmentsTable.status} != 'cancelled'`))
+    .where(and(eq(appointmentsTable.clinicId, clinicId), eq(appointmentsTable.appointmentDate, today), sql`${appointmentsTable.status} != 'cancelled'`))
     .orderBy(appointmentsTable.timeSlot);
 
   res.json(

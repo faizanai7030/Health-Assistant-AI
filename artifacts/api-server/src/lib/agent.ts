@@ -18,12 +18,12 @@ function generateTimeSlots(start: string, end: string, durationMinutes: number):
   return slots;
 }
 
-async function getTodayEmergencies(): Promise<Map<number, { type: string; message: string | null }>> {
+async function getTodayEmergencies(clinicId: number): Promise<Map<number, { type: string; message: string | null }>> {
   const today = new Date().toISOString().split("T")[0];
   const rows = await db
     .select()
     .from(doctorEmergenciesTable)
-    .where(eq(doctorEmergenciesTable.date, today));
+    .where(and(eq(doctorEmergenciesTable.clinicId, clinicId), eq(doctorEmergenciesTable.date, today)));
 
   const map = new Map<number, { type: string; message: string | null }>();
   for (const row of rows) {
@@ -32,12 +32,13 @@ async function getTodayEmergencies(): Promise<Map<number, { type: string; messag
   return map;
 }
 
-export async function getAvailabilityContext(date: string): Promise<string> {
-  const doctors = await db.select().from(doctorsTable).where(eq(doctorsTable.isActive, true));
+export async function getAvailabilityContext(clinicId: number, date: string): Promise<string> {
+  const doctors = await db.select().from(doctorsTable)
+    .where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true)));
   const dateObj = new Date(date);
   const dayOfWeek = dateObj.getDay();
   const today = new Date().toISOString().split("T")[0];
-  const emergencies = date === today ? await getTodayEmergencies() : new Map();
+  const emergencies = date === today ? await getTodayEmergencies(clinicId) : new Map();
 
   const lines: string[] = [`Availability for ${date}:`];
 
@@ -94,6 +95,7 @@ interface ConversationMessage {
 }
 
 export async function processWhatsAppMessage(
+  clinicId: number,
   patientPhone: string,
   userMessage: string,
   conversationHistory: ConversationMessage[]
@@ -103,10 +105,10 @@ export async function processWhatsAppMessage(
   const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString().split("T")[0];
 
   const [availabilityToday, availabilityTomorrow, availabilityDayAfter, doctors] = await Promise.all([
-    getAvailabilityContext(today),
-    getAvailabilityContext(tomorrow),
-    getAvailabilityContext(dayAfter),
-    db.select().from(doctorsTable).where(eq(doctorsTable.isActive, true)),
+    getAvailabilityContext(clinicId, today),
+    getAvailabilityContext(clinicId, tomorrow),
+    getAvailabilityContext(clinicId, dayAfter),
+    db.select().from(doctorsTable).where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true))),
   ]);
 
   const doctorList = doctors
@@ -184,6 +186,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
             .from(appointmentsTable)
             .where(
               and(
+                eq(appointmentsTable.clinicId, clinicId),
                 eq(appointmentsTable.doctorId, action.doctorId),
                 eq(appointmentsTable.appointmentDate, action.appointmentDate),
                 eq(appointmentsTable.timeSlot, action.timeSlot),
@@ -200,6 +203,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
               .from(appointmentsTable)
               .where(
                 and(
+                  eq(appointmentsTable.clinicId, clinicId),
                   eq(appointmentsTable.doctorId, action.doctorId),
                   eq(appointmentsTable.appointmentDate, action.appointmentDate),
                   sql`${appointmentsTable.status} != 'cancelled'`
@@ -208,6 +212,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
             const tokenNumber = (tokenCountResult[0]?.count ?? 0) + 1;
 
             await db.insert(appointmentsTable).values({
+              clinicId,
               patientName: action.patientName,
               patientPhone: action.patientPhone,
               doctorId: action.doctorId,

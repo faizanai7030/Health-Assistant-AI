@@ -6,7 +6,8 @@ const router = Router();
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 
-router.get("/doctors/emergency-today", async (_req, res) => {
+router.get("/doctors/emergency-today", async (req, res) => {
+  const clinicId = req.clinicId!;
   const today = todayStr();
   const rows = await db
     .select({
@@ -20,29 +21,33 @@ router.get("/doctors/emergency-today", async (_req, res) => {
     })
     .from(doctorEmergenciesTable)
     .innerJoin(doctorsTable, eq(doctorEmergenciesTable.doctorId, doctorsTable.id))
-    .where(eq(doctorEmergenciesTable.date, today));
+    .where(and(eq(doctorEmergenciesTable.clinicId, clinicId), eq(doctorEmergenciesTable.date, today)));
 
   res.json(rows);
 });
 
 router.post("/doctors/:id/emergency", async (req, res) => {
+  const clinicId = req.clinicId!;
   const doctorId = Number(req.params["id"]);
   const { type, message } = req.body as { type: string; message?: string };
   const today = todayStr();
 
-  const doctor = await db.select().from(doctorsTable).where(eq(doctorsTable.id, doctorId));
+  const doctor = await db.select().from(doctorsTable)
+    .where(and(eq(doctorsTable.id, doctorId), eq(doctorsTable.clinicId, clinicId)));
   if (!doctor[0]) return res.status(404).json({ error: "Doctor not found" });
 
   await db
     .delete(doctorEmergenciesTable)
     .where(
       and(
+        eq(doctorEmergenciesTable.clinicId, clinicId),
         eq(doctorEmergenciesTable.doctorId, doctorId),
         eq(doctorEmergenciesTable.date, today)
       )
     );
 
   const [row] = await db.insert(doctorEmergenciesTable).values({
+    clinicId,
     doctorId,
     date: today,
     type,
@@ -53,6 +58,7 @@ router.post("/doctors/:id/emergency", async (req, res) => {
 });
 
 router.delete("/doctors/:id/emergency", async (req, res) => {
+  const clinicId = req.clinicId!;
   const doctorId = Number(req.params["id"]);
   const today = todayStr();
 
@@ -60,6 +66,7 @@ router.delete("/doctors/:id/emergency", async (req, res) => {
     .delete(doctorEmergenciesTable)
     .where(
       and(
+        eq(doctorEmergenciesTable.clinicId, clinicId),
         eq(doctorEmergenciesTable.doctorId, doctorId),
         eq(doctorEmergenciesTable.date, today)
       )

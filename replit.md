@@ -33,22 +33,39 @@ A full-stack SaaS platform for hospitals and clinics. An AI agent (powered by GP
 11. **Conversations** — WhatsApp conversation threads (full message history)
 12. **Simulator** — Test the AI agent in a WhatsApp-style chat interface
 
+## Multi-Tenant Architecture
+
+One deployment serves all clinic clients. Each clinic has its own data, isolated by `clinicId`.
+
+- **Auth**: Session-based login (express-session + bcrypt). Each clinic has admin email + password.
+- **Session**: Stores `clinicId`, `clinicName`, `adminEmail`. All API routes filter data by clinic.
+- **Super-admin**: `POST /api/auth/create-clinic` (requires `X-Admin-Key: <SUPER_ADMIN_KEY>` header) creates new tenants.
+- **Demo credentials**: `admin@demo.com` / `demo1234` (clinic id=1)
+
 ## Architecture
 
 - `artifacts/api-server` — Express 5 backend (doctors, appointments, conversations, dashboard routes)
-- `artifacts/clinic-agent` — React + Vite frontend dashboard
+- `artifacts/clinic-agent` — React + Vite frontend dashboard (with login page + auth context)
 - `lib/api-spec/openapi.yaml` — OpenAPI contract (source of truth)
-- `lib/api-client-react` — Generated React Query hooks
+- `lib/api-client-react` — Generated React Query hooks (custom-fetch sends `credentials: include`)
 - `lib/api-zod` — Generated Zod validation schemas
 - `lib/db` — Drizzle ORM schema and DB client
 - `lib/integrations-openai-ai-server` — OpenAI SDK client
 
 ## DB Tables
 
-- `doctors` — Doctor records with schedule config
-- `appointments` — Patient appointments
-- `whatsapp_conversations` — Per-patient conversation records
+- `clinics` — Multi-tenant clinic records (name, slug, adminEmail, passwordHash, isActive)
+- `doctors` — Doctor records with schedule config (scoped by clinicId)
+- `appointments` — Patient appointments (scoped by clinicId)
+- `whatsapp_conversations` — Per-patient conversation records (scoped by clinicId)
 - `whatsapp_messages` — Individual messages (user/assistant)
+- `doctor_emergencies` — Emergency status (scoped by clinicId)
+- `appointment_reminders` — Reminder log (scoped by clinicId)
+
+## Environment Variables
+
+- `SESSION_SECRET` — Secret for express-session cookie signing
+- `SUPER_ADMIN_KEY` — Key to create new clinic tenants via API
 
 ## Key Commands
 

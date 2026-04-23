@@ -5,9 +5,12 @@ import { eq, and } from "drizzle-orm";
 const router = Router();
 
 router.get("/reminders", async (req, res) => {
+  const clinicId = req.clinicId!;
   const status = req.query["status"] as string | undefined;
 
-  const rows = await db.select().from(appointmentRemindersTable).orderBy(appointmentRemindersTable.scheduledFor);
+  const rows = await db.select().from(appointmentRemindersTable)
+    .where(eq(appointmentRemindersTable.clinicId, clinicId))
+    .orderBy(appointmentRemindersTable.scheduledFor);
 
   if (status) {
     res.json(rows.filter((r) => r.status === status));
@@ -17,6 +20,7 @@ router.get("/reminders", async (req, res) => {
 });
 
 router.post("/reminders", async (req, res) => {
+  const clinicId = req.clinicId!;
   const { appointmentId, reminderMinutesBefore = 60 } = req.body as {
     appointmentId: number;
     reminderMinutesBefore?: number;
@@ -46,6 +50,7 @@ router.post("/reminders", async (req, res) => {
   const reminderMessage = `Dear ${appt.patientName}, this is a reminder that your appointment with ${appt.doctorName} is scheduled for ${appt.appointmentDate} at ${appt.timeSlot}. Please arrive 10 minutes early.`;
 
   const [row] = await db.insert(appointmentRemindersTable).values({
+    clinicId,
     appointmentId,
     patientName: appt.patientName,
     patientPhone: appt.patientPhone,
@@ -75,6 +80,7 @@ router.patch("/reminders/:id", async (req, res) => {
 });
 
 router.post("/reminders/generate-today", async (req, res) => {
+  const clinicId = req.clinicId!;
   const today = new Date().toISOString().split("T")[0];
 
   const todayAppts = await db
@@ -90,6 +96,7 @@ router.post("/reminders/generate-today", async (req, res) => {
     .innerJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
     .where(
       and(
+        eq(appointmentsTable.clinicId, clinicId),
         eq(appointmentsTable.appointmentDate, today),
         eq(appointmentsTable.status, "scheduled")
       )
@@ -98,7 +105,7 @@ router.post("/reminders/generate-today", async (req, res) => {
   const existing = await db
     .select({ appointmentId: appointmentRemindersTable.appointmentId })
     .from(appointmentRemindersTable)
-    .where(eq(appointmentRemindersTable.status, "pending"));
+    .where(and(eq(appointmentRemindersTable.clinicId, clinicId), eq(appointmentRemindersTable.status, "pending")));
 
   const existingIds = new Set(existing.map((e) => e.appointmentId));
 
@@ -118,6 +125,7 @@ router.post("/reminders/generate-today", async (req, res) => {
     const reminderMessage = `Dear ${appt.patientName}, this is a reminder that your appointment with ${appt.doctorName} is scheduled today at ${appt.timeSlot}. Please arrive 10 minutes early.`;
 
     await db.insert(appointmentRemindersTable).values({
+      clinicId,
       appointmentId: appt.id,
       patientName: appt.patientName,
       patientPhone: appt.patientPhone,

@@ -29,12 +29,13 @@ function formatAppointment(a: typeof appointmentsTable.$inferSelect, doctor: typ
   };
 }
 
-async function assignTokenNumber(doctorId: number, date: string): Promise<number> {
+async function assignTokenNumber(clinicId: number, doctorId: number, date: string): Promise<number> {
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(appointmentsTable)
     .where(
       and(
+        eq(appointmentsTable.clinicId, clinicId),
         eq(appointmentsTable.doctorId, doctorId),
         eq(appointmentsTable.appointmentDate, date),
         sql`${appointmentsTable.status} != 'cancelled'`
@@ -44,13 +45,14 @@ async function assignTokenNumber(doctorId: number, date: string): Promise<number
 }
 
 router.get("/appointments", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const query = ListAppointmentsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
     return;
   }
 
-  const conditions = [];
+  const conditions: ReturnType<typeof eq>[] = [eq(appointmentsTable.clinicId, clinicId)];
   if (query.data.doctorId) conditions.push(eq(appointmentsTable.doctorId, query.data.doctorId));
   if (query.data.date) conditions.push(eq(appointmentsTable.appointmentDate, query.data.date as string));
   if (query.data.status) conditions.push(eq(appointmentsTable.status, query.data.status as string));
@@ -59,7 +61,7 @@ router.get("/appointments", async (req, res): Promise<void> => {
     .select()
     .from(appointmentsTable)
     .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(appointmentsTable.appointmentDate, appointmentsTable.timeSlot);
 
   res.json(
@@ -81,13 +83,16 @@ router.get("/appointments", async (req, res): Promise<void> => {
 });
 
 router.post("/appointments", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const parsed = CreateAppointmentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [doctor] = await db.select().from(doctorsTable).where(eq(doctorsTable.id, parsed.data.doctorId));
+  const [doctor] = await db.select().from(doctorsTable).where(
+    and(eq(doctorsTable.id, parsed.data.doctorId), eq(doctorsTable.clinicId, clinicId))
+  );
   if (!doctor) {
     res.status(400).json({ error: "Doctor not found" });
     return;
@@ -98,6 +103,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
     .from(appointmentsTable)
     .where(
       and(
+        eq(appointmentsTable.clinicId, clinicId),
         eq(appointmentsTable.doctorId, parsed.data.doctorId),
         eq(appointmentsTable.appointmentDate, parsed.data.appointmentDate),
         eq(appointmentsTable.timeSlot, parsed.data.timeSlot),
@@ -110,17 +116,18 @@ router.post("/appointments", async (req, res): Promise<void> => {
     return;
   }
 
-  const tokenNumber = await assignTokenNumber(parsed.data.doctorId, parsed.data.appointmentDate);
+  const tokenNumber = await assignTokenNumber(clinicId, parsed.data.doctorId, parsed.data.appointmentDate);
 
   const [appointment] = await db
     .insert(appointmentsTable)
-    .values({ ...parsed.data, tokenNumber })
+    .values({ ...parsed.data, clinicId, tokenNumber })
     .returning();
 
   res.status(201).json(formatAppointment(appointment, doctor));
 });
 
 router.get("/appointments/:id", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = GetAppointmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -130,7 +137,7 @@ router.get("/appointments/:id", async (req, res): Promise<void> => {
     .select()
     .from(appointmentsTable)
     .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
-    .where(eq(appointmentsTable.id, params.data.id));
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.clinicId, clinicId)));
 
   if (!row[0]) {
     res.status(404).json({ error: "Appointment not found" });
@@ -154,6 +161,7 @@ router.get("/appointments/:id", async (req, res): Promise<void> => {
 });
 
 router.patch("/appointments/:id", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = UpdateAppointmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -172,7 +180,7 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
     .select()
     .from(appointmentsTable)
     .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
-    .where(eq(appointmentsTable.id, params.data.id));
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.clinicId, clinicId)));
 
   if (!rowsBefore[0]) {
     res.status(404).json({ error: "Appointment not found" });
@@ -182,7 +190,7 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
   const [appointment] = await db
     .update(appointmentsTable)
     .set(updates)
-    .where(eq(appointmentsTable.id, params.data.id))
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.clinicId, clinicId)))
     .returning();
 
   const { doctors: d } = rowsBefore[0];
@@ -203,6 +211,7 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/appointments/:id", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = DeleteAppointmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -210,7 +219,7 @@ router.delete("/appointments/:id", async (req, res): Promise<void> => {
   }
   const [appointment] = await db
     .delete(appointmentsTable)
-    .where(eq(appointmentsTable.id, params.data.id))
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.clinicId, clinicId)))
     .returning();
   if (!appointment) {
     res.status(404).json({ error: "Appointment not found" });

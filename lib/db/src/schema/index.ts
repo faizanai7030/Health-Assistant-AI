@@ -1,3 +1,4 @@
+export * from "./clinics";
 export * from "./doctors";
 export * from "./appointments";
 export * from "./whatsapp_conversations";

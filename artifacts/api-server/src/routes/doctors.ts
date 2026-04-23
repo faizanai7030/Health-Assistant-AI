@@ -30,28 +30,35 @@ function generateTimeSlots(start: string, end: string, durationMinutes: number):
   return slots;
 }
 
-router.get("/doctors", async (_req, res): Promise<void> => {
-  const doctors = await db.select().from(doctorsTable).orderBy(doctorsTable.name);
+router.get("/doctors", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
+  const doctors = await db.select().from(doctorsTable)
+    .where(eq(doctorsTable.clinicId, clinicId))
+    .orderBy(doctorsTable.name);
   res.json(doctors.map((d) => ({ ...d, isActive: d.isActive, createdAt: d.createdAt.toISOString() })));
 });
 
 router.post("/doctors", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const parsed = CreateDoctorBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [doctor] = await db.insert(doctorsTable).values(parsed.data).returning();
+  const [doctor] = await db.insert(doctorsTable).values({ ...parsed.data, clinicId }).returning();
   res.status(201).json({ ...doctor, createdAt: doctor.createdAt.toISOString() });
 });
 
 router.get("/doctors/:id", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = GetDoctorParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [doctor] = await db.select().from(doctorsTable).where(eq(doctorsTable.id, params.data.id));
+  const [doctor] = await db.select().from(doctorsTable).where(
+    and(eq(doctorsTable.id, params.data.id), eq(doctorsTable.clinicId, clinicId))
+  );
   if (!doctor) {
     res.status(404).json({ error: "Doctor not found" });
     return;
@@ -60,6 +67,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
 });
 
 router.patch("/doctors/:id", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = UpdateDoctorParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -74,7 +82,9 @@ router.patch("/doctors/:id", async (req, res): Promise<void> => {
   for (const [k, v] of Object.entries(parsed.data)) {
     if (v !== null && v !== undefined) updates[k] = v;
   }
-  const [doctor] = await db.update(doctorsTable).set(updates).where(eq(doctorsTable.id, params.data.id)).returning();
+  const [doctor] = await db.update(doctorsTable).set(updates)
+    .where(and(eq(doctorsTable.id, params.data.id), eq(doctorsTable.clinicId, clinicId)))
+    .returning();
   if (!doctor) {
     res.status(404).json({ error: "Doctor not found" });
     return;
@@ -83,12 +93,15 @@ router.patch("/doctors/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/doctors/:id", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = DeleteDoctorParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [doctor] = await db.delete(doctorsTable).where(eq(doctorsTable.id, params.data.id)).returning();
+  const [doctor] = await db.delete(doctorsTable)
+    .where(and(eq(doctorsTable.id, params.data.id), eq(doctorsTable.clinicId, clinicId)))
+    .returning();
   if (!doctor) {
     res.status(404).json({ error: "Doctor not found" });
     return;
@@ -97,6 +110,7 @@ router.delete("/doctors/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/doctors/:id/availability", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
   const params = GetDoctorAvailabilityParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -108,7 +122,9 @@ router.get("/doctors/:id/availability", async (req, res): Promise<void> => {
     return;
   }
 
-  const [doctor] = await db.select().from(doctorsTable).where(eq(doctorsTable.id, params.data.id));
+  const [doctor] = await db.select().from(doctorsTable).where(
+    and(eq(doctorsTable.id, params.data.id), eq(doctorsTable.clinicId, clinicId))
+  );
   if (!doctor) {
     res.status(404).json({ error: "Doctor not found" });
     return;
