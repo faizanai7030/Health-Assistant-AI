@@ -1,24 +1,84 @@
 import { useState } from "react";
-import { useListAppointments, getListAppointmentsQueryKey, useUpdateAppointment } from "@workspace/api-client-react";
+import {
+  useListAppointments,
+  getListAppointmentsQueryKey,
+  useUpdateAppointment,
+  useCreateAppointment,
+  useDeleteAppointment,
+  useListDoctors,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Calendar, Clock, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+function generateTimeSlots(start: string, end: string, duration: number): string[] {
+  const slots: string[] = [];
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let cur = sh * 60 + sm;
+  const endTotal = eh * 60 + em;
+  while (cur < endTotal) {
+    slots.push(`${String(Math.floor(cur / 60)).padStart(2, "0")}:${String(cur % 60).padStart(2, "0")}`);
+    cur += duration;
+  }
+  return slots;
+}
+
+const walkinSchema = z.object({
+  patientName: z.string().min(1, "Patient name is required"),
+  patientPhone: z.string().min(5, "Phone number is required"),
+  doctorId: z.coerce.number().min(1, "Select a doctor"),
+  appointmentDate: z.string().min(1, "Select a date"),
+  timeSlot: z.string().min(1, "Select a time slot"),
+  notes: z.string().optional(),
+});
+type WalkinForm = z.infer<typeof walkinSchema>;
 
 export default function Appointments() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedDoctor, setSelectedDoctor] = useState<string>("all");
+  const [showWalkin, setShowWalkin] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const { data: appointments, isLoading } = useListAppointments({
-    query: { queryKey: getListAppointmentsQueryKey(), refetchInterval: 30000 }
+  const { data: appointments, isLoading } = useListAppointments(
+    undefined,
+    { query: { queryKey: getListAppointmentsQueryKey(), refetchInterval: 15000 } }
+  );
+  const { data: doctors } = useListDoctors();
+  const updateApt = useUpdateAppointment();
+  const createApt = useCreateAppointment();
+  const deleteApt = useDeleteAppointment();
+
+  const form = useForm<WalkinForm>({
+    resolver: zodResolver(walkinSchema),
+    defaultValues: {
+      patientName: "",
+      patientPhone: "",
+      doctorId: 0,
+      appointmentDate: new Date().toISOString().split("T")[0],
+      timeSlot: "",
+      notes: "",
+    },
   });
 
-  const updateApt = useUpdateAppointment();
+  const watchDoctorId = form.watch("doctorId");
+  const selectedDoctorObj = doctors?.find((d) => d.id === Number(watchDoctorId));
+  const timeSlots = selectedDoctorObj
+    ? generateTimeSlots(selectedDoctorObj.workingHoursStart, selectedDoctorObj.workingHoursEnd, selectedDoctorObj.slotDurationMinutes)
+    : [];
 
   const handleStatusChange = (id: number, newStatus: string) => {
     updateApt.mutate({ id, data: { status: newStatus } }, {
@@ -26,6 +86,46 @@ export default function Appointments() {
         queryClient.invalidateQueries({ queryKey: getListAppointmentsQueryKey() });
         toast({ title: "Appointment status updated" });
       }
+    });
+  };
+
+  const handleDelete = (id: number) => {
+    setDeletingId(id);
+    deleteApt.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListAppointmentsQueryKey() });
+        toast({ title: "Appointment removed" });
+        setDeletingId(null);
+      },
+      onError: () => {
+        toast({ title: "Error", description: "Failed to remove appointment", variant: "destructive" });
+        setDeletingId(null);
+      },
+    });
+  };
+
+  const onWalkinSubmit = (values: WalkinForm) => {
+    createApt.mutate({
+      data: {
+        patientName: values.patientName,
+        patientPhone: values.patientPhone,
+        doctorId: values.doctorId,
+        appointmentDate: values.appointmentDate,
+        timeSlot: values.timeSlot,
+        notes: values.notes ?? null,
+        status: "scheduled",
+      }
+    }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListAppointmentsQueryKey() });
+        toast({ title: "Walk-in appointment booked", description: `${values.patientName} has been added.` });
+        setShowWalkin(false);
+        form.reset();
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Could not book appointment";
+        toast({ title: "Error", description: msg, variant: "destructive" });
+      },
     });
   };
 
@@ -39,7 +139,7 @@ export default function Appointments() {
     }
   };
 
-  const doctors = appointments
+  const doctorFilters = appointments
     ? Array.from(new Map(appointments.map((a) => [a.doctorName, a.doctorSpecialization])).entries())
     : [];
 
@@ -49,12 +149,102 @@ export default function Appointments() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Appointments</h1>
-        <p className="text-muted-foreground mt-1">Filter by doctor to see their individual appointment list.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Appointments</h1>
+          <p className="text-muted-foreground mt-1">Manage all appointments. Walk-ins can be added manually.</p>
+        </div>
+        <Button onClick={() => setShowWalkin(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Book Walk-in
+        </Button>
       </div>
 
-      {!isLoading && doctors.length > 0 && (
+      {/* Walk-in Dialog */}
+      <Dialog open={showWalkin} onOpenChange={(o) => { setShowWalkin(o); if (!o) form.reset(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Book Walk-in Appointment</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onWalkinSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="patientName" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Patient Name</FormLabel>
+                    <FormControl><Input placeholder="Full name" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="patientPhone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl><Input placeholder="+91..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="doctorId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Doctor</FormLabel>
+                  <Select onValueChange={(v) => { field.onChange(Number(v)); form.setValue("timeSlot", ""); }} value={field.value ? String(field.value) : ""}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {doctors?.map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>{d.name} — {d.specialization}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="appointmentDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="timeSlot" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time Slot</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={timeSlots.length === 0}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder={timeSlots.length === 0 ? "Select doctor first" : "Pick time"} /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeSlots.map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="notes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (optional)</FormLabel>
+                  <FormControl><Input placeholder="Reason for visit, symptoms..." {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => { setShowWalkin(false); form.reset(); }}>Cancel</Button>
+                <Button type="submit" disabled={createApt.isPending}>
+                  {createApt.isPending ? "Booking..." : "Book Appointment"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Doctor filter tabs */}
+      {!isLoading && doctorFilters.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedDoctor("all")}
@@ -67,7 +257,7 @@ export default function Appointments() {
             All Doctors
             <span className="ml-2 text-xs opacity-70">({appointments?.length ?? 0})</span>
           </button>
-          {doctors.map(([name, spec]) => {
+          {doctorFilters.map(([name, spec]) => {
             const count = appointments?.filter((a) => a.doctorName === name).length ?? 0;
             return (
               <button
@@ -103,6 +293,9 @@ export default function Appointments() {
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="mx-auto h-12 w-12 opacity-20 mb-4" />
               <p>No appointments found.</p>
+              <Button variant="outline" className="mt-4" onClick={() => setShowWalkin(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add Walk-in
+              </Button>
             </div>
           ) : (
             <div className="relative w-full overflow-auto">
@@ -162,20 +355,35 @@ export default function Appointments() {
                         </Badge>
                       </td>
                       <td className="p-4 align-middle">
-                        <Select
-                          value={apt.status}
-                          onValueChange={(val) => handleStatusChange(apt.id, val)}
-                        >
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
-                            <SelectValue placeholder="Update Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={apt.status}
+                            onValueChange={(val) => handleStatusChange(apt.id, val)}
+                          >
+                            <SelectTrigger className="w-[120px] h-8 text-xs">
+                              <SelectValue placeholder="Update Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="scheduled">Scheduled</SelectItem>
+                              <SelectItem value="confirmed">Confirmed</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            disabled={deletingId === apt.id}
+                            onClick={() => {
+                              if (confirm(`Remove ${apt.patientName}'s appointment?`)) {
+                                handleDelete(apt.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -1,6 +1,6 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { logger } from "./logger";
 
 function generateTimeSlots(start: string, end: string, durationMinutes: number): string[] {
@@ -89,6 +89,33 @@ export async function getAvailabilityContext(clinicId: number, date: string): Pr
   return lines.join("\n");
 }
 
+async function getPatientUpcomingAppointments(clinicId: number, patientPhone: string) {
+  const today = new Date().toISOString().split("T")[0];
+  const rows = await db
+    .select({
+      id: appointmentsTable.id,
+      doctorId: appointmentsTable.doctorId,
+      doctorName: doctorsTable.name,
+      appointmentDate: appointmentsTable.appointmentDate,
+      timeSlot: appointmentsTable.timeSlot,
+      status: appointmentsTable.status,
+      patientName: appointmentsTable.patientName,
+      tokenNumber: appointmentsTable.tokenNumber,
+    })
+    .from(appointmentsTable)
+    .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
+    .where(
+      and(
+        eq(appointmentsTable.clinicId, clinicId),
+        eq(appointmentsTable.patientPhone, patientPhone),
+        sql`${appointmentsTable.status} != 'cancelled'`,
+        gte(appointmentsTable.appointmentDate, today)
+      )
+    )
+    .orderBy(appointmentsTable.appointmentDate, appointmentsTable.timeSlot);
+  return rows;
+}
+
 interface ConversationMessage {
   role: "user" | "assistant" | "system";
   content: string;
@@ -99,26 +126,34 @@ export async function processWhatsAppMessage(
   patientPhone: string,
   userMessage: string,
   conversationHistory: ConversationMessage[]
-): Promise<{ reply: string; appointmentBooked: boolean }> {
+): Promise<{ reply: string; appointmentBooked: boolean; patientName: string | null; appointmentCancelled: boolean }> {
   const today = new Date().toISOString().split("T")[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
   const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString().split("T")[0];
 
-  const [availabilityToday, availabilityTomorrow, availabilityDayAfter, doctors] = await Promise.all([
+  const [availabilityToday, availabilityTomorrow, availabilityDayAfter, doctors, patientAppointments] = await Promise.all([
     getAvailabilityContext(clinicId, today),
     getAvailabilityContext(clinicId, tomorrow),
     getAvailabilityContext(clinicId, dayAfter),
     db.select().from(doctorsTable).where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true))),
+    getPatientUpcomingAppointments(clinicId, patientPhone),
   ]);
 
   const doctorList = doctors
     .map((d) => `${d.name} (ID: ${d.id}, ${d.specialization})`)
     .join("\n");
 
+  const patientAppointmentsSection = patientAppointments.length > 0
+    ? `\nThis patient's upcoming appointments:\n${patientAppointments
+        .map((a) => `- ID:${a.id} | Dr. ${a.doctorName} | ${a.appointmentDate} at ${a.timeSlot} | Status: ${a.status}`)
+        .join("\n")}`
+    : `\nThis patient has no upcoming appointments.`;
+
   const systemPrompt = `You are Priya, the friendly WhatsApp receptionist for this clinic. You talk to patients in a warm, natural, human way — just like a real person would chat on WhatsApp.
 
 Today's date: ${today}
 Patient's WhatsApp: ${patientPhone}
+${patientAppointmentsSection}
 
 Doctors at this clinic:
 ${doctorList}
@@ -146,16 +181,30 @@ ${availabilityDayAfter}
 4. If a doctor has EMERGENCY - NOT COMING TODAY: apologize and suggest another doctor or another day
 5. If a doctor has EMERGENCY - WILL BE LATE: mention this to the patient before booking early slots
 6. When the patient says a time, check the availability info: round to the nearest valid slot boundary and confirm if it's free. If that slot is full, suggest the next available time naturally in conversation.
-7. Once you have everything (name, doctor ID, date, time): book it using the ACTION below
+7. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
 8. After booking, give them a warm confirmation with all the details
 
-━━━ BOOKING ━━━
+━━━ CANCELLATION ━━━
+If a patient asks to cancel their appointment:
+1. Look at "This patient's upcoming appointments" above
+2. If they have one appointment, say: "I found your appointment with Dr. [name] on [date] at [time]. Are you sure you want to cancel it? Please reply *Yes* to confirm."
+3. If they have multiple appointments, ask which one they want to cancel
+4. If they have no appointments, tell them kindly there's nothing to cancel
+5. Once they confirm (reply "yes" or similar), cancel it using the CANCEL ACTION below then send a kind farewell message
+
+━━━ BOOKING ACTION ━━━
 When you're ready to book, put this EXACT format on its own line (the system will parse it silently):
 ACTION:{"type":"BOOK_APPOINTMENT","patientName":"...","patientPhone":"${patientPhone}","doctorId":NUMBER,"appointmentDate":"YYYY-MM-DD","timeSlot":"HH:MM","notes":"..."}
 
 Then after that line, send your friendly confirmation message to the patient — always address them by their name in the confirmation.
 
-IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time slot.`;
+━━━ CANCEL ACTION ━━━
+When the patient confirms cancellation, put this EXACT format on its own line:
+ACTION:{"type":"CANCEL_APPOINTMENT","appointmentId":NUMBER}
+
+Then send a warm message like "Done! Your appointment has been cancelled. Hope to see you again soon! 😊"
+
+IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time slot. Only cancel after patient explicitly confirms.`;
 
   const messages: ConversationMessage[] = [
     { role: "system", content: systemPrompt },
@@ -172,6 +221,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
   const rawReply = response.choices[0]?.message?.content ?? "Sorry, I couldn't process that. Could you try again? 🙏";
 
   let appointmentBooked = false;
+  let appointmentCancelled = false;
   let bookedTokenNumber: number | null = null;
   let bookedPatientName: string | null = null;
 
@@ -181,6 +231,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
       try {
         const jsonStr = actionLine.replace("ACTION:", "").trim();
         const action = JSON.parse(jsonStr);
+
         if (action.type === "BOOK_APPOINTMENT") {
           const conflictCheck = await db
             .select({ count: sql<number>`count(*)::int` })
@@ -231,6 +282,30 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
             logger.warn({ action }, "Slot conflict detected during booking");
           }
         }
+
+        if (action.type === "CANCEL_APPOINTMENT") {
+          const [apt] = await db
+            .select()
+            .from(appointmentsTable)
+            .where(
+              and(
+                eq(appointmentsTable.id, action.appointmentId),
+                eq(appointmentsTable.clinicId, clinicId),
+                eq(appointmentsTable.patientPhone, patientPhone)
+              )
+            );
+
+          if (apt) {
+            await db
+              .update(appointmentsTable)
+              .set({ status: "cancelled" })
+              .where(eq(appointmentsTable.id, action.appointmentId));
+            appointmentCancelled = true;
+            logger.info({ appointmentId: action.appointmentId }, "Appointment cancelled via AI agent");
+          } else {
+            logger.warn({ action }, "Could not find appointment to cancel");
+          }
+        }
       } catch (err) {
         logger.warn({ err }, "Failed to parse ACTION from AI reply");
       }
@@ -247,5 +322,5 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
     cleanReply += `\n\n🎫 *Your Token Number: ${bookedTokenNumber}*\nPlease show this number when you arrive at the clinic.`;
   }
 
-  return { reply: cleanReply, appointmentBooked, patientName: bookedPatientName };
+  return { reply: cleanReply, appointmentBooked, patientName: bookedPatientName, appointmentCancelled };
 }

@@ -8,6 +8,10 @@ import {
   useGetDoctorEmergenciesToday,
   useSetDoctorEmergency,
   useClearDoctorEmergency,
+  useListAppointments,
+  getListAppointmentsQueryKey,
+  useCreateAppointment,
+  useDeleteAppointment,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,13 +19,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, User, Stethoscope, Phone, Clock, Pencil, Trash2, Link2, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, User, Stethoscope, Phone, Clock, Pencil, Trash2, Link2, AlertTriangle, XCircle, CalendarDays } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { format, parseISO } from "date-fns";
+
+function generateTimeSlots(start: string, end: string, duration: number): string[] {
+  const slots: string[] = [];
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let cur = sh * 60 + sm;
+  const endTotal = eh * 60 + em;
+  while (cur < endTotal) {
+    slots.push(`${String(Math.floor(cur / 60)).padStart(2, "0")}:${String(cur % 60).padStart(2, "0")}`);
+    cur += duration;
+  }
+  return slots;
+}
 
 const doctorSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -33,6 +52,205 @@ const doctorSchema = z.object({
   slotDurationMinutes: z.coerce.number().min(5).max(120),
   workingDays: z.string().min(1, "Working days required (e.g. 1,2,3,4,5)")
 });
+
+const walkinSchema = z.object({
+  patientName: z.string().min(1, "Patient name is required"),
+  patientPhone: z.string().min(5, "Phone number is required"),
+  appointmentDate: z.string().min(1, "Select a date"),
+  timeSlot: z.string().min(1, "Select a time slot"),
+  notes: z.string().optional(),
+});
+type WalkinForm = z.infer<typeof walkinSchema>;
+
+function DoctorScheduleDialog({ doctor }: { doctor: { id: number; name: string; specialization: string; workingHoursStart: string; workingHoursEnd: string; slotDurationMinutes: number } }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [showWalkin, setShowWalkin] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: appointments, isLoading } = useListAppointments(
+    { doctorId: doctor.id, date },
+    { query: { queryKey: [...getListAppointmentsQueryKey(), doctor.id, date], enabled: open, refetchInterval: open ? 15000 : false } }
+  );
+
+  const createApt = useCreateAppointment();
+  const deleteApt = useDeleteAppointment();
+
+  const timeSlots = generateTimeSlots(doctor.workingHoursStart, doctor.workingHoursEnd, doctor.slotDurationMinutes);
+
+  const form = useForm<WalkinForm>({
+    resolver: zodResolver(walkinSchema),
+    defaultValues: { patientName: "", patientPhone: "", appointmentDate: date, timeSlot: "", notes: "" },
+  });
+
+  const onWalkin = (values: WalkinForm) => {
+    createApt.mutate({
+      data: {
+        patientName: values.patientName,
+        patientPhone: values.patientPhone,
+        doctorId: doctor.id,
+        appointmentDate: values.appointmentDate,
+        timeSlot: values.timeSlot,
+        notes: values.notes ?? null,
+        status: "scheduled",
+      }
+    }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListAppointmentsQueryKey() });
+        toast({ title: "Walk-in booked", description: `${values.patientName} added to Dr. ${doctor.name}'s schedule.` });
+        setShowWalkin(false);
+        form.reset({ patientName: "", patientPhone: "", appointmentDate: date, timeSlot: "", notes: "" });
+      },
+      onError: (err: unknown) => {
+        toast({ title: "Error", description: err instanceof Error ? err.message : "Booking failed", variant: "destructive" });
+      },
+    });
+  };
+
+  const handleDelete = (id: number, name: string) => {
+    if (confirm(`Remove ${name}'s appointment?`)) {
+      deleteApt.mutate({ id }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListAppointmentsQueryKey() });
+          toast({ title: "Appointment removed" });
+        },
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="flex-1 text-primary border-primary/30 hover:bg-primary/5">
+          <CalendarDays className="w-4 h-4 mr-1" /> Schedule
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Dr. {doctor.name} — {doctor.specialization}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex items-center gap-3 mb-4">
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              form.setValue("appointmentDate", e.target.value);
+            }}
+            className="w-48"
+          />
+          <Button size="sm" onClick={() => { setShowWalkin(true); form.setValue("appointmentDate", date); }}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Book Walk-in
+          </Button>
+        </div>
+
+        {showWalkin && (
+          <div className="border rounded-lg p-4 mb-4 bg-muted/30">
+            <div className="font-medium text-sm mb-3">New Walk-in for {format(parseISO(date), "MMM d, yyyy")}</div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onWalkin)} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="patientName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Patient Name</FormLabel>
+                      <FormControl><Input placeholder="Full name" className="h-8 text-sm" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="patientPhone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Phone</FormLabel>
+                      <FormControl><Input placeholder="+91..." className="h-8 text-sm" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="timeSlot" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Time Slot</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Pick time" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {timeSlots.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="notes" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Notes (optional)</FormLabel>
+                      <FormControl><Input placeholder="Reason..." className="h-8 text-sm" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={createApt.isPending}>
+                    {createApt.isPending ? "Booking..." : "Confirm Walk-in"}
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setShowWalkin(false); form.reset(); }}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        ) : !appointments?.length ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No appointments for this date.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {appointments.map((apt) => (
+              <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
+                    {apt.tokenNumber ?? "—"}
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">{apt.patientName}</div>
+                    <div className="text-xs text-muted-foreground">{apt.patientPhone} · {apt.timeSlot}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      apt.status === "scheduled" ? "bg-blue-100 text-blue-800 border-blue-200 text-xs" :
+                      apt.status === "confirmed" ? "bg-green-100 text-green-800 border-green-200 text-xs" :
+                      apt.status === "cancelled" ? "bg-red-100 text-red-800 border-red-200 text-xs" :
+                      "bg-gray-100 text-gray-800 border-gray-200 text-xs"
+                    }
+                  >
+                    {apt.status}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(apt.id, apt.patientName)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Doctors() {
   const queryClient = useQueryClient();
@@ -147,7 +365,7 @@ export default function Doctors() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Doctors</h1>
-          <p className="text-muted-foreground mt-1">Manage medical staff and their schedules.</p>
+          <p className="text-muted-foreground mt-1">Manage medical staff and their schedules. Click "Schedule" on any doctor to view or add walk-in appointments.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -305,13 +523,14 @@ export default function Doctors() {
                     )}
 
                     <div className="pt-2 flex space-x-2 border-t mt-2">
+                      <DoctorScheduleDialog doctor={doctor} />
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
                         onClick={() => copyPortalLink(doctor.portalToken)}
                       >
-                        <Link2 className="w-4 h-4 mr-1" /> Portal Link
+                        <Link2 className="w-4 h-4" />
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(doctor)}>
                         <Pencil className="w-4 h-4" />
