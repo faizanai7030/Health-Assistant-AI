@@ -5,6 +5,7 @@ declare module "express-session" {
     clinicId: number;
     clinicName: string;
     adminEmail: string;
+    isSuperAdmin: boolean;
   }
 }
 
@@ -22,5 +23,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
   req.clinicId = req.session.clinicId;
+  next();
+}
+
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.session?.isSuperAdmin) {
+    res.status(403).json({ error: "Super admin access required" });
+    return;
+  }
   next();
 }

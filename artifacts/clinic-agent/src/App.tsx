@@ -6,6 +6,9 @@ import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 import Login from "@/pages/login";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { SuperAdminProvider, useSuperAdmin } from "@/lib/super-admin-auth";
+import SuperAdminLogin from "@/pages/super-admin/login";
+import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 
 import Dashboard from "@/pages/dashboard";
 import Doctors from "@/pages/doctors";
@@ -24,7 +27,21 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+function SuperAdminSection() {
+  const { isAdmin, loading } = useSuperAdmin();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-gray-600 text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  return isAdmin ? <SuperAdminDashboard /> : <SuperAdminLogin />;
+}
+
+function ClinicSection() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -62,14 +79,29 @@ function Router() {
   );
 }
 
+function Router() {
+  return (
+    <Switch>
+      <Route path="/super-admin">
+        <SuperAdminProvider>
+          <SuperAdminSection />
+        </SuperAdminProvider>
+      </Route>
+      <Route>
+        <AuthProvider>
+          <ClinicSection />
+        </AuthProvider>
+      </Route>
+    </Switch>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
+          <Router />
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
