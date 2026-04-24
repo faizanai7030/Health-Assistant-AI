@@ -92,4 +92,61 @@ router.post("/auth/create-clinic", async (req, res): Promise<void> => {
   });
 });
 
+router.patch("/auth/account", requireAuth, async (req, res): Promise<void> => {
+  const { currentPassword, newPassword, newEmail } = req.body as {
+    currentPassword: string;
+    newPassword?: string;
+    newEmail?: string;
+  };
+
+  if (!currentPassword) {
+    res.status(400).json({ error: "Current password is required to make changes" });
+    return;
+  }
+
+  const [clinic] = await db.select().from(clinicsTable).where(eq(clinicsTable.id, req.clinicId!));
+  if (!clinic) {
+    res.status(404).json({ error: "Clinic not found" });
+    return;
+  }
+
+  const valid = await bcrypt.compare(currentPassword, clinic.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+
+  const updates: Partial<typeof clinic> = {};
+
+  if (newEmail && newEmail !== clinic.adminEmail) {
+    const [existing] = await db.select().from(clinicsTable).where(eq(clinicsTable.adminEmail, newEmail));
+    if (existing) {
+      res.status(409).json({ error: "That email is already in use" });
+      return;
+    }
+    updates.adminEmail = newEmail;
+  }
+
+  if (newPassword) {
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "New password must be at least 8 characters" });
+      return;
+    }
+    updates.passwordHash = await bcrypt.hash(newPassword, 10);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "No changes provided" });
+    return;
+  }
+
+  await db.update(clinicsTable).set(updates).where(eq(clinicsTable.id, req.clinicId!));
+
+  if (updates.adminEmail) {
+    req.session.adminEmail = updates.adminEmail;
+  }
+
+  res.json({ ok: true, adminEmail: updates.adminEmail ?? clinic.adminEmail });
+});
+
 export default router;

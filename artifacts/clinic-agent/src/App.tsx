@@ -17,6 +17,7 @@ import Conversations from "@/pages/conversations";
 import Simulator from "@/pages/simulator";
 import Reminders from "@/pages/reminders";
 import DoctorPortal from "@/pages/doctor-portal";
+import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,6 +71,7 @@ function ClinicSection() {
               <Route path="/reminders" component={Reminders} />
               <Route path="/conversations" component={Conversations} />
               <Route path="/simulator" component={Simulator} />
+              <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
           </Layout>
