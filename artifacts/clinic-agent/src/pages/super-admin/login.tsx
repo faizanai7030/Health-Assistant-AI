@@ -30,7 +30,7 @@ export default function SuperAdminLogin() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-white">Super Admin</h1>
-            <p className="text-xs text-gray-500">ClinicAI Platform Control</p>
+            <p className="text-xs text-gray-500">I'll Handle It — Platform Control</p>
           </div>
         </div>
 

@@ -39,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="min-w-0">
             <div className="font-bold text-sm tracking-tight text-foreground truncate">
-              {user?.clinicName ?? "ClinicAI"}
+              {user?.clinicName ?? "I'll Handle It"}
             </div>
             <div className="text-xs text-muted-foreground truncate">{user?.adminEmail}</div>
           </div>
@@ -78,7 +78,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Mobile Header */}
         <header className="md:hidden border-b bg-card p-4 flex items-center justify-between">
-          <div className="font-bold text-lg text-foreground">{user?.clinicName ?? "ClinicAI"}</div>
+          <div className="font-bold text-lg text-foreground">{user?.clinicName ?? "I'll Handle It"}</div>
           <div className="flex space-x-2 items-center">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>

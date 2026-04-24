@@ -124,7 +124,7 @@ export default function SuperAdminDashboard() {
               <Shield className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="font-bold text-white text-sm">ClinicAI — Super Admin</p>
+              <p className="font-bold text-white text-sm">I'll Handle It — Super Admin</p>
               <p className="text-xs text-gray-500">Platform Management</p>
             </div>
           </div>

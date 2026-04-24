@@ -31,7 +31,7 @@ export default function Login() {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">ClinicAI</h1>
+            <h1 className="text-xl font-bold text-gray-900">I'll Handle It</h1>
             <p className="text-xs text-gray-500">Clinic Management Portal</p>
           </div>
         </div>
