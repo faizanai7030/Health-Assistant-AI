@@ -41,10 +41,12 @@ export default function Doctors() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const { data: doctors, isLoading } = useListDoctors({
-    query: { queryKey: getListDoctorsQueryKey() }
+    query: { queryKey: getListDoctorsQueryKey(), refetchInterval: 30000 }
   });
 
-  const { data: emergencies } = useGetDoctorEmergenciesToday();
+  const { data: emergencies } = useGetDoctorEmergenciesToday({
+    query: { refetchInterval: 15000 }
+  });
 
   const createDoc = useCreateDoctor();
   const updateDoc = useUpdateDoctor();

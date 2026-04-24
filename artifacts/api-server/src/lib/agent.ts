@@ -173,6 +173,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
 
   let appointmentBooked = false;
   let bookedTokenNumber: number | null = null;
+  let bookedPatientName: string | null = null;
 
   if (rawReply.includes("ACTION:")) {
     const actionLine = rawReply.split("\n").find((l) => l.startsWith("ACTION:"));
@@ -223,6 +224,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
               tokenNumber,
             });
             bookedTokenNumber = tokenNumber;
+            bookedPatientName = action.patientName ?? null;
             appointmentBooked = true;
             logger.info({ action }, "Appointment booked via AI agent");
           } else {
@@ -245,5 +247,5 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
     cleanReply += `\n\n🎫 *Your Token Number: ${bookedTokenNumber}*\nPlease show this number when you arrive at the clinic.`;
   }
 
-  return { reply: cleanReply, appointmentBooked };
+  return { reply: cleanReply, appointmentBooked, patientName: bookedPatientName };
 }

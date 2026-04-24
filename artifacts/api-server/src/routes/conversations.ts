@@ -124,7 +124,7 @@ router.post("/conversations/webhook", async (req, res): Promise<void> => {
     content: message,
   });
 
-  const { reply, appointmentBooked } = await processWhatsAppMessage(
+  const { reply, appointmentBooked, patientName } = await processWhatsAppMessage(
     clinicId,
     patientPhone,
     message,
@@ -139,7 +139,10 @@ router.post("/conversations/webhook", async (req, res): Promise<void> => {
 
   await db
     .update(whatsappConversationsTable)
-    .set({ updatedAt: new Date() })
+    .set({
+      updatedAt: new Date(),
+      ...(patientName && !conv.patientName ? { patientName } : {}),
+    })
     .where(eq(whatsappConversationsTable.id, conv.id));
 
   req.log.info({ patientPhone, appointmentBooked }, "Processed WhatsApp message");
@@ -170,7 +173,7 @@ router.post("/conversations/simulate", async (req, res): Promise<void> => {
     content: message,
   });
 
-  const { reply, appointmentBooked } = await processWhatsAppMessage(
+  const { reply, appointmentBooked, patientName } = await processWhatsAppMessage(
     clinicId,
     patientPhone,
     message,
@@ -185,7 +188,10 @@ router.post("/conversations/simulate", async (req, res): Promise<void> => {
 
   await db
     .update(whatsappConversationsTable)
-    .set({ updatedAt: new Date() })
+    .set({
+      updatedAt: new Date(),
+      ...(patientName && !conv.patientName ? { patientName } : {}),
+    })
     .where(eq(whatsappConversationsTable.id, conv.id));
 
   res.json({ response: reply, conversationId: conv.id, appointmentBooked });

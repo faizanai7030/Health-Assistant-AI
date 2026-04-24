@@ -7,11 +7,11 @@ import { format } from "date-fns";
 
 export default function Dashboard() {
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary({
-    query: { queryKey: getGetDashboardSummaryQueryKey() }
+    query: { queryKey: getGetDashboardSummaryQueryKey(), refetchInterval: 30000 }
   });
 
   const { data: todayAppointments, isLoading: isLoadingAppointments } = useGetTodayAppointments({
-    query: { queryKey: getGetTodayAppointmentsQueryKey() }
+    query: { queryKey: getGetTodayAppointmentsQueryKey(), refetchInterval: 30000 }
   });
 
   return (

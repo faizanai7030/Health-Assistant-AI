@@ -15,7 +15,7 @@ export default function Appointments() {
   const [selectedDoctor, setSelectedDoctor] = useState<string>("all");
 
   const { data: appointments, isLoading } = useListAppointments({
-    query: { queryKey: getListAppointmentsQueryKey() }
+    query: { queryKey: getListAppointmentsQueryKey(), refetchInterval: 30000 }
   });
 
   const updateApt = useUpdateAppointment();
