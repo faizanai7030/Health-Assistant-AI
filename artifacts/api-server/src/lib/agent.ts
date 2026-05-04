@@ -3,6 +3,22 @@ import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable } from "@wo
 import { eq, and, sql, gte } from "drizzle-orm";
 import { logger } from "./logger";
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 4, delayMs = 500): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      const isRetryable = status === 429 || status === 500 || status === 503;
+      if (!isRetryable || attempt === retries) throw err;
+      const wait = delayMs * Math.pow(2, attempt);
+      logger.warn({ attempt, wait, status }, "OpenAI retryable error — retrying");
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw new Error("withRetry exhausted");
+}
+
 function generateTimeSlots(start: string, end: string, durationMinutes: number): string[] {
   const slots: string[] = [];
   const [startH, startM] = start.split(":").map(Number);
@@ -212,11 +228,13 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
     { role: "user", content: userMessage },
   ];
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    max_completion_tokens: 600,
-    messages,
-  });
+  const response = await withRetry(() =>
+    openai.chat.completions.create({
+      model: "gpt-4o",
+      max_completion_tokens: 600,
+      messages,
+    })
+  );
 
   const rawReply = response.choices[0]?.message?.content ?? "Sorry, I couldn't process that. Could you try again? 🙏";
 

@@ -110,44 +110,50 @@ router.post("/conversations/webhook", async (req, res): Promise<void> => {
   }
 
   const { from: patientPhone, message } = parsed.data;
-  const conv = await getOrCreateConversation(clinicId, patientPhone);
 
-  const history = await db
-    .select()
-    .from(whatsappMessagesTable)
-    .where(eq(whatsappMessagesTable.conversationId, conv.id))
-    .orderBy(whatsappMessagesTable.createdAt);
+  res.json({ status: "received" });
 
-  await db.insert(whatsappMessagesTable).values({
-    conversationId: conv.id,
-    role: "user",
-    content: message,
+  setImmediate(async () => {
+    try {
+      const conv = await getOrCreateConversation(clinicId, patientPhone);
+      const history = await db
+        .select()
+        .from(whatsappMessagesTable)
+        .where(eq(whatsappMessagesTable.conversationId, conv.id))
+        .orderBy(whatsappMessagesTable.createdAt);
+
+      await db.insert(whatsappMessagesTable).values({
+        conversationId: conv.id,
+        role: "user",
+        content: message,
+      });
+
+      const { reply, appointmentBooked, patientName } = await processWhatsAppMessage(
+        clinicId,
+        patientPhone,
+        message,
+        history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
+      );
+
+      await db.insert(whatsappMessagesTable).values({
+        conversationId: conv.id,
+        role: "assistant",
+        content: reply,
+      });
+
+      await db
+        .update(whatsappConversationsTable)
+        .set({
+          updatedAt: new Date(),
+          ...(patientName && !conv.patientName ? { patientName } : {}),
+        })
+        .where(eq(whatsappConversationsTable.id, conv.id));
+
+      logger.info({ patientPhone, appointmentBooked, clinicId }, "Processed WhatsApp message");
+    } catch (err) {
+      logger.error({ err, patientPhone, clinicId }, "Failed to process WhatsApp message");
+    }
   });
-
-  const { reply, appointmentBooked, patientName } = await processWhatsAppMessage(
-    clinicId,
-    patientPhone,
-    message,
-    history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
-  );
-
-  await db.insert(whatsappMessagesTable).values({
-    conversationId: conv.id,
-    role: "assistant",
-    content: reply,
-  });
-
-  await db
-    .update(whatsappConversationsTable)
-    .set({
-      updatedAt: new Date(),
-      ...(patientName && !conv.patientName ? { patientName } : {}),
-    })
-    .where(eq(whatsappConversationsTable.id, conv.id));
-
-  req.log.info({ patientPhone, appointmentBooked }, "Processed WhatsApp message");
-
-  res.json({ response: reply, conversationId: conv.id });
 });
 
 router.post("/conversations/simulate", async (req, res): Promise<void> => {
