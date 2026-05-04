@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSuperAdmin, SUPER_ADMIN_API } from "@/lib/super-admin-auth";
-import { Shield, Plus, Building2, Users, Calendar, CheckCircle2, XCircle, LogOut, Pencil, X } from "lucide-react";
+import { Shield, Plus, Building2, Users, Calendar, CheckCircle2, XCircle, LogOut, Pencil, X, Search } from "lucide-react";
 
 interface Clinic {
   id: number;
@@ -28,6 +28,7 @@ export default function SuperAdminDashboard() {
   const { logout } = useSuperAdmin();
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
   const [form, setForm] = useState<ClinicForm>(emptyForm);
@@ -167,6 +168,17 @@ export default function SuperAdminDashboard() {
           </button>
         </div>
 
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search hospital or clinic name..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+          />
+        </div>
+
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
@@ -181,7 +193,12 @@ export default function SuperAdminDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {clinics.map(clinic => (
+            {clinics.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                <p className="text-gray-400">No clinics found for "<span className="text-white">{search}</span>"</p>
+              </div>
+            ) : null}
+            {clinics.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).map(clinic => (
               <div key={clinic.id} className={`bg-gray-900 border rounded-xl p-5 flex items-center gap-4 ${clinic.isActive ? "border-gray-800" : "border-gray-800 opacity-60"}`}>
                 <div className="h-10 w-10 rounded-lg bg-indigo-900/50 border border-indigo-800 flex items-center justify-center shrink-0">
                   <Building2 className="w-5 h-5 text-indigo-400" />
