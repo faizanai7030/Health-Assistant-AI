@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
 import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -10,6 +11,22 @@ import { logger } from "./lib/logger";
 const PgSession = connectPgSimple(session);
 
 const app: Express = express();
+
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please slow down." },
+});
+
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Webhook rate limit exceeded." },
+});
 
 app.use(
   pinoHttp({
@@ -53,6 +70,8 @@ app.use(
   })
 );
 
+app.use("/api/conversations/webhook", webhookLimiter);
+app.use("/api", generalLimiter);
 app.use("/api", router);
 
 export default app;
