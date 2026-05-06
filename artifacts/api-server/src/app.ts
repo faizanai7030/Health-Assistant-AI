@@ -20,13 +20,6 @@ const generalLimiter = rateLimit({
   message: { error: "Too many requests, please slow down." },
 });
 
-const webhookLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Webhook rate limit exceeded." },
-});
 
 app.use(
   pinoHttp({
@@ -70,7 +63,6 @@ app.use(
   })
 );
 
-app.use("/api/conversations/webhook", webhookLimiter);
 app.use("/api", generalLimiter);
 app.use("/api", router);
 
