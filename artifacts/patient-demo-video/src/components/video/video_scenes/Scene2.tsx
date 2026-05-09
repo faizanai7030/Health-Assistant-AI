@@ -101,7 +101,7 @@ export function Scene2() {
     >
       {/* Floating label */}
       <motion.div
-        className="absolute top-[14%] right-[4%] bg-white/10 backdrop-blur-md border border-white/10 text-white text-[2.2vw] px-[2.5vw] py-[1.2vw] rounded-full shadow-xl z-50 whitespace-nowrap"
+        className="absolute top-[14%] right-[4%] bg-white/10 backdrop-blur-md border border-white/10 text-white text-[3.2vw] px-[3vw] py-[1.4vw] rounded-full shadow-xl z-50 whitespace-nowrap"
         initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
         animate={phase >= 15 ? { opacity: 1, x: 0, filter: 'blur(0px)' } : { opacity: 0, x: 20, filter: 'blur(10px)' }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}

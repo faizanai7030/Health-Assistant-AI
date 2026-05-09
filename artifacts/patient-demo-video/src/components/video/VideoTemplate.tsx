@@ -10,13 +10,13 @@ import { Scene6 } from './video_scenes/Scene6';
 import { Scene7 } from './video_scenes/Scene7';
 
 export const SCENE_DURATIONS = {
-  hook: 3500,
-  whatsapp: 17500,
-  dashboard: 5000,
-  doctors: 5000,
-  portal: 9500,
-  reminders: 5000,
-  outro: 5000,
+  hook: 6000,
+  whatsapp: 26000,
+  dashboard: 9000,
+  doctors: 9000,
+  portal: 15000,
+  reminders: 9000,
+  outro: 8000,
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
