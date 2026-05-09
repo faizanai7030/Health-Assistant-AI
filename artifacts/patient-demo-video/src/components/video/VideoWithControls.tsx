@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Repeat, Volume2, VolumeX } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
-import { startAmbientMusic, setMuted, resumeCtx } from '@/lib/ambient-audio';
+import { startAmbientMusic, setMutedAudio, resumeCtx } from '@/lib/ambient-audio';
 
 const PROGRESS_TICK_MS = 60;
 
@@ -173,27 +173,20 @@ export default function VideoWithControls() {
   const [tapPinned, setTapPinned] = useState(false);
   const [muted, setMutedState] = useState(false);
   const audioStarted = useRef(false);
+  const [audioReady, setAudioReady] = useState(false);
 
   const startAudio = useCallback(() => {
     if (audioStarted.current) return;
     audioStarted.current = true;
-    startAmbientMusic(false);
+    resumeCtx();
+    startAmbientMusic();
+    setAudioReady(true);
   }, []);
-
-  useEffect(() => {
-    const handler = () => { resumeCtx(); startAudio(); };
-    window.addEventListener('pointerdown', handler, { once: true });
-    window.addEventListener('keydown', handler, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', handler);
-      window.removeEventListener('keydown', handler);
-    };
-  }, [startAudio]);
 
   const handleToggleMute = useCallback(() => {
     startAudio();
     setMutedState(m => {
-      setMuted(!m);
+      setMutedAudio(!m);
       return !m;
     });
   }, [startAudio]);
@@ -231,13 +224,25 @@ export default function VideoWithControls() {
   if (!isIframed) return <VideoTemplate />;
 
   return (
-    <div className="relative w-full h-screen">
+    <div className="relative w-full h-screen" onClick={startAudio}>
       <VideoTemplate
         key={mountKey}
         durations={durations}
         loop
         onSceneChange={onSceneChange}
       />
+
+      {/* Tap-to-unmute hint — fades out once audio is running */}
+      {!audioReady && (
+        <button
+          onClick={startAudio}
+          className="absolute top-5 right-5 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/80 text-sm font-medium hover:bg-black/80 hover:text-white transition-all animate-pulse"
+        >
+          <Volume2 className="w-4 h-4" />
+          Tap for music
+        </button>
+      )}
+
       <div
         ref={sensorRef}
         className="absolute bottom-0 left-0 right-0 z-50 flex flex-col justify-end"
