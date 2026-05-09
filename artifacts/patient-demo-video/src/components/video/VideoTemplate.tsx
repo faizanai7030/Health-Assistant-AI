@@ -12,7 +12,7 @@ import { ScenePain } from './video_scenes/ScenePain';
 
 export const SCENE_DURATIONS = {
   hook: 6000,
-  pain: 14000,
+  pain: 19000,
   whatsapp: 26000,
   dashboard: 9000,
   doctors: 9000,

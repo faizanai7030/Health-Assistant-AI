@@ -26,17 +26,17 @@ export function ScenePain() {
     const timers = [
       setTimeout(() => setPhase(1),  400),
       setTimeout(() => setVisibleProblems(1), 1400),
-      setTimeout(() => setVisibleProblems(2), 2200),
-      setTimeout(() => setVisibleProblems(3), 3000),
-      setTimeout(() => setVisibleProblems(4), 3800),
-      setTimeout(() => setVisibleProblems(5), 4600),
-      setTimeout(() => setPhase(2),  6200),
-      setTimeout(() => setVisibleSolutions(1), 7000),
-      setTimeout(() => setVisibleSolutions(2), 7700),
-      setTimeout(() => setVisibleSolutions(3), 8400),
-      setTimeout(() => setVisibleSolutions(4), 9100),
-      setTimeout(() => setVisibleSolutions(5), 9800),
-      setTimeout(() => setPhase(3), 11000),
+      setTimeout(() => setVisibleProblems(2), 2700),
+      setTimeout(() => setVisibleProblems(3), 4000),
+      setTimeout(() => setVisibleProblems(4), 5300),
+      setTimeout(() => setVisibleProblems(5), 6600),
+      setTimeout(() => setPhase(2),  8200),
+      setTimeout(() => setVisibleSolutions(1), 9000),
+      setTimeout(() => setVisibleSolutions(2), 10300),
+      setTimeout(() => setVisibleSolutions(3), 11600),
+      setTimeout(() => setVisibleSolutions(4), 12900),
+      setTimeout(() => setVisibleSolutions(5), 14200),
+      setTimeout(() => setPhase(3), 15800),
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
