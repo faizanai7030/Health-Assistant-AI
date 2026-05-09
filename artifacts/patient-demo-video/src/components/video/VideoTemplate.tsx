@@ -8,9 +8,11 @@ import { Scene4 } from './video_scenes/Scene4';
 import { Scene5 } from './video_scenes/Scene5';
 import { Scene6 } from './video_scenes/Scene6';
 import { Scene7 } from './video_scenes/Scene7';
+import { ScenePain } from './video_scenes/ScenePain';
 
 export const SCENE_DURATIONS = {
   hook: 6000,
+  pain: 14000,
   whatsapp: 26000,
   dashboard: 9000,
   doctors: 9000,
@@ -21,6 +23,7 @@ export const SCENE_DURATIONS = {
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
   hook: Scene1,
+  pain: ScenePain,
   whatsapp: Scene2,
   dashboard: Scene3,
   doctors: Scene4,
