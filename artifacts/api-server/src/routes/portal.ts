@@ -67,6 +67,7 @@ router.post("/doctors/portal/:token/emergency", async (req, res) => {
     );
 
   const [row] = await db.insert(doctorEmergenciesTable).values({
+    clinicId: doctor.clinicId,
     doctorId: doctor.id,
     date: today,
     type,

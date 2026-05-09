@@ -4,6 +4,7 @@ import {
   useGetDoctorPortal,
   useSetDoctorEmergencyViaPortal,
   useClearDoctorEmergencyViaPortal,
+  getGetDoctorPortalQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +20,7 @@ export default function DoctorPortal() {
 
   const { data, isLoading, isError } = useGetDoctorPortal(
     token,
-    { query: { enabled: !!token, queryKey: ["portal", token] } }
+    { query: { enabled: !!token } }
   );
 
   const setEmergency = useSetDoctorEmergencyViaPortal();
@@ -33,7 +34,7 @@ export default function DoctorPortal() {
     setConfirming(null);
     setEmergency.mutate({ token, data: { type } }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["portal", token] });
+        queryClient.invalidateQueries({ queryKey: getGetDoctorPortalQueryKey(token) });
         toast({
           title: type === "absent" ? "Marked as not coming today" : "Marked as running late",
           description: "Patients will not be booked for you today. Clinic staff has been notified.",
@@ -47,7 +48,7 @@ export default function DoctorPortal() {
     setConfirming(null);
     clearEmergency.mutate({ token }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["portal", token] });
+        queryClient.invalidateQueries({ queryKey: getGetDoctorPortalQueryKey(token) });
         toast({ title: "Status cleared — you're available again" });
       },
     });
