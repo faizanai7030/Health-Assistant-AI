@@ -11,7 +11,7 @@ import { Scene7 } from './video_scenes/Scene7';
 
 export const SCENE_DURATIONS = {
   hook: 3500,
-  whatsapp: 13500,
+  whatsapp: 17500,
   dashboard: 5000,
   doctors: 5000,
   portal: 9500,

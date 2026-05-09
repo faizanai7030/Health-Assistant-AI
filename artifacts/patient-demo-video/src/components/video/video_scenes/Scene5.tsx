@@ -28,7 +28,7 @@ export function Scene5() {
     >
       {/* Floating label */}
       <motion.div
-        className="absolute top-[10%] right-[6%] bg-white/10 backdrop-blur-md border border-white/10 text-white text-[1.4vw] px-[2vw] py-[1vw] rounded-full shadow-xl z-50 whitespace-nowrap"
+        className="absolute top-[10%] right-[6%] bg-white/10 backdrop-blur-md border border-white/10 text-white text-[1.9vw] px-[2.5vw] py-[1.2vw] rounded-full shadow-xl z-50 whitespace-nowrap"
         initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
         animate={phase >= 8 ? { opacity: 1, x: 0, filter: 'blur(0px)' } : { opacity: 0, x: 20, filter: 'blur(10px)' }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -47,12 +47,12 @@ export function Scene5() {
         <div className="bg-[#0f1923] px-[3vw] pt-[2vw] pb-[1.5vw] shrink-0 border-b border-[#1e2a35]">
           <div className="flex items-center justify-between mb-[0.5vw]">
             <div>
-              <div className="text-white font-bold text-[2.5vw]">Dr. Sharma</div>
-              <div className="text-[#8696A0] text-[1.4vw]">General Physician · May 10, 2026</div>
+              <div className="text-white font-bold text-[2.8vw]">Dr. Sharma</div>
+              <div className="text-[#8696A0] text-[1.8vw]">General Physician · May 10, 2026</div>
             </div>
             {/* Status badge */}
             <motion.div
-              className="px-[2vw] py-[0.8vw] rounded-full text-[1.4vw] font-bold border"
+              className="px-[2.5vw] py-[1vw] rounded-full text-[1.8vw] font-bold border"
               animate={phase >= 4
                 ? { backgroundColor: 'rgba(251,146,60,0.15)', borderColor: '#fb923c', color: '#fb923c' }
                 : { backgroundColor: 'rgba(37,211,102,0.1)', borderColor: '#25D366', color: '#25D366' }
@@ -66,7 +66,7 @@ export function Scene5() {
 
         {/* Schedule */}
         <div className="flex-1 overflow-hidden px-[3vw] pt-[2.5vw] flex flex-col gap-[1.8vw]">
-          <div className="text-[1.6vw] text-[#8696A0] font-medium mb-[0.5vw]">TODAY'S SCHEDULE</div>
+          <div className="text-[1.9vw] text-[#8696A0] font-medium mb-[0.5vw]">TODAY'S SCHEDULE</div>
 
           {[
             { token: '#3', time: '9:00 AM',  patient: 'Arvind Kapoor',  status: 'Completed', color: 'text-[#4ade80]' },
@@ -83,13 +83,13 @@ export function Scene5() {
               transition={{ delay: i * 0.07, duration: 0.4 }}
             >
               <div>
-                <div className="text-white font-semibold text-[1.8vw] flex items-center gap-[1.5vw]">
-                  <span className="text-[#8696A0] text-[1.4vw]">{token}</span>
+                <div className="text-white font-semibold text-[2.1vw] flex items-center gap-[1.5vw]">
+                  <span className="text-[#8696A0] text-[1.7vw]">{token}</span>
                   {patient}
                 </div>
-                <div className="text-[#8696A0] text-[1.3vw] mt-[0.3vw]">{time}</div>
+                <div className="text-[#8696A0] text-[1.7vw] mt-[0.3vw]">{time}</div>
               </div>
-              <div className={`text-[1.4vw] font-medium ${color}`}>{status}</div>
+              <div className={`text-[1.7vw] font-medium ${color}`}>{status}</div>
             </motion.div>
           ))}
         </div>
@@ -104,10 +104,10 @@ export function Scene5() {
                 transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 className="flex flex-col gap-[1.5vw]"
               >
-                <div className="text-[1.4vw] text-[#8696A0] text-center">Running late or can't make it?</div>
+                <div className="text-[1.8vw] text-[#8696A0] text-center">Running late or can't make it?</div>
 
                 <motion.button
-                  className="w-full rounded-xl py-[2.5vw] text-center font-bold text-[2vw] border-2 relative overflow-hidden"
+                  className="w-full rounded-xl py-[2.5vw] text-center font-bold text-[2.2vw] border-2 relative overflow-hidden"
                   style={{ borderColor: '#fb923c' }}
                   animate={phase >= 3
                     ? { backgroundColor: 'rgba(251,146,60,0.25)', color: '#fb923c', scale: 0.97, boxShadow: '0 0 24px rgba(251,146,60,0.35)' }
@@ -119,7 +119,7 @@ export function Scene5() {
                 </motion.button>
 
                 <motion.button
-                  className="w-full rounded-xl py-[2vw] text-center font-bold text-[1.8vw] border-2"
+                  className="w-full rounded-xl py-[2vw] text-center font-bold text-[2.2vw] border-2"
                   style={{ borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', color: '#ef4444' }}
                 >
                   ❌ Not Coming Today
@@ -146,7 +146,7 @@ export function Scene5() {
                 <path d="M12 2a10 10 0 1 0 10 10H12V2Z"/>
               </svg>
             </div>
-            <div className="text-white font-semibold text-[1.8vw]">Priya — AI Receptionist</div>
+            <div className="text-white font-semibold text-[2.2vw]">Priya — AI Receptionist</div>
             <motion.div
               className="ml-auto w-[1.5vw] h-[1.5vw] rounded-full bg-[#25D366]"
               animate={{ opacity: [1, 0.3, 1] }}
@@ -168,8 +168,8 @@ export function Scene5() {
                 {phase >= 5 && <span className="text-[#25D366] text-[1.4vw] font-bold">✓</span>}
               </motion.div>
               <div>
-                <div className="text-white text-[1.7vw] font-medium">New bookings paused for Dr. Sharma</div>
-                <div className="text-[#8696A0] text-[1.3vw] mt-[0.3vw]">Patients trying to book will be informed of the delay</div>
+                <div className="text-white text-[2.1vw] font-medium">New bookings paused for Dr. Sharma</div>
+                <div className="text-[#8696A0] text-[1.7vw] mt-[0.4vw]">Patients trying to book will be informed of the delay</div>
               </div>
             </motion.div>
 
@@ -183,11 +183,11 @@ export function Scene5() {
                 className="w-[2.5vw] h-[2.5vw] rounded-full border-2 flex items-center justify-center shrink-0 mt-[0.3vw]"
                 animate={phase >= 6 ? { borderColor: '#25D366', backgroundColor: 'rgba(37,211,102,0.15)' } : { borderColor: '#1e2a35' }}
               >
-                {phase >= 6 && <span className="text-[#25D366] text-[1.4vw] font-bold">✓</span>}
+                {phase >= 6 && <span className="text-[#25D366] text-[1.7vw] font-bold">✓</span>}
               </motion.div>
               <div>
-                <div className="text-white text-[1.7vw] font-medium">Sending WhatsApp updates to 3 upcoming patients</div>
-                <div className="text-[#8696A0] text-[1.3vw] mt-[0.3vw]">Rahul Kumar, Priya Nair + 1 more notified</div>
+                <div className="text-white text-[2.1vw] font-medium">Sending WhatsApp updates to 3 upcoming patients</div>
+                <div className="text-[#8696A0] text-[1.7vw] mt-[0.4vw]">Rahul Kumar, Priya Nair + 1 more notified</div>
               </div>
             </motion.div>
           </div>
@@ -206,8 +206,8 @@ export function Scene5() {
               <div className="bg-[#1F2C33] px-[3vw] py-[1.8vw] flex items-center gap-[2vw]">
                 <div className="w-[4vw] h-[4vw] rounded-full bg-[#25D366] flex items-center justify-center text-[#111B21] font-bold text-[1.6vw] shrink-0">P</div>
                 <div>
-                  <div className="text-white text-[1.6vw] font-semibold">Priya → Rahul Kumar</div>
-                  <div className="text-[#8696A0] text-[1.2vw]">WhatsApp · just now</div>
+                  <div className="text-white text-[2vw] font-semibold">Priya → Rahul Kumar</div>
+                  <div className="text-[#8696A0] text-[1.6vw]">WhatsApp · just now</div>
                 </div>
                 <div className="ml-auto">
                   <svg width="2.5vw" height="2.5vw" viewBox="0 0 24 24" fill="#25D366">
@@ -217,7 +217,7 @@ export function Scene5() {
               </div>
               {/* message bubble */}
               <div className="px-[3vw] py-[2.5vw]">
-                <div className="bg-[#1F2C33] rounded-[1.5vw] rounded-tl-none px-[2.5vw] py-[2vw] text-[1.7vw] text-[#E9EDEF] leading-relaxed">
+                <div className="bg-[#1F2C33] rounded-[1.5vw] rounded-tl-none px-[2.5vw] py-[2vw] text-[2vw] text-[#E9EDEF] leading-relaxed">
                   Hi Rahul! 🙏 Dr. Sharma is running a little late today.<br /><br />
                   Your <span className="text-[#25D366] font-semibold">10:30 AM appointment (Token #7)</span> may be
                   pushed by <span className="text-white font-semibold">~30–45 minutes</span>.<br /><br />
