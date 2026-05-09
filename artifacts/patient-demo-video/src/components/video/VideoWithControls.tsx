@@ -152,8 +152,6 @@ function ControlBar({
 }
 
 export default function VideoWithControls() {
-  const isIframed = typeof window !== 'undefined' && window.self !== window.top;
-
   const {
     sceneKeys,
     activeIndex,
@@ -220,8 +218,6 @@ export default function VideoWithControls() {
   }, [collapsed, tapPinned]);
 
   const barVisible = !collapsed || hovering || tapPinned;
-
-  if (!isIframed) return <VideoTemplate />;
 
   return (
     <div className="relative w-full h-screen" onClick={startAudio}>
