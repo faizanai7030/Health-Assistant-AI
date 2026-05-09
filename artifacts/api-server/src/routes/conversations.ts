@@ -3,7 +3,6 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db, whatsappConversationsTable, whatsappMessagesTable } from "@workspace/db";
 import {
   GetConversationParams,
-  HandleWhatsappWebhookBody,
   SimulateWhatsappMessageBody,
 } from "@workspace/api-zod";
 import { processWhatsAppMessage } from "../lib/agent";
@@ -101,60 +100,6 @@ router.get("/conversations/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/conversations/webhook", async (req, res): Promise<void> => {
-  const clinicId = req.clinicId!;
-  const parsed = HandleWhatsappWebhookBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const { from: patientPhone, message } = parsed.data;
-
-  res.json({ status: "received" });
-
-  setImmediate(async () => {
-    try {
-      const conv = await getOrCreateConversation(clinicId, patientPhone);
-      const history = await db
-        .select()
-        .from(whatsappMessagesTable)
-        .where(eq(whatsappMessagesTable.conversationId, conv.id))
-        .orderBy(whatsappMessagesTable.createdAt);
-
-      await db.insert(whatsappMessagesTable).values({
-        conversationId: conv.id,
-        role: "user",
-        content: message,
-      });
-
-      const { reply, appointmentBooked, patientName } = await processWhatsAppMessage(
-        clinicId,
-        patientPhone,
-        message,
-        history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
-      );
-
-      await db.insert(whatsappMessagesTable).values({
-        conversationId: conv.id,
-        role: "assistant",
-        content: reply,
-      });
-
-      await db
-        .update(whatsappConversationsTable)
-        .set({
-          updatedAt: new Date(),
-          ...(patientName && !conv.patientName ? { patientName } : {}),
-        })
-        .where(eq(whatsappConversationsTable.id, conv.id));
-
-      logger.info({ patientPhone, appointmentBooked, clinicId }, "Processed WhatsApp message");
-    } catch (err) {
-      logger.error({ err, patientPhone, clinicId }, "Failed to process WhatsApp message");
-    }
-  });
-});
 
 router.post("/conversations/simulate", async (req, res): Promise<void> => {
   const clinicId = req.clinicId!;

@@ -92,6 +92,47 @@ router.post("/auth/create-clinic", async (req, res): Promise<void> => {
   });
 });
 
+router.get("/settings/whatsapp", requireAuth, async (req, res): Promise<void> => {
+  const [clinic] = await db
+    .select({ whatsappNumber: clinicsTable.whatsappNumber })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, req.clinicId!));
+
+  const host = req.headers["x-forwarded-host"] ?? req.headers["host"] ?? "health-assistant-ai.replit.app";
+  const protocol = req.headers["x-forwarded-proto"] ?? "https";
+  const webhookUrl = `${protocol}://${host}/api/conversations/webhook`;
+
+  res.json({
+    whatsappNumber: clinic?.whatsappNumber ?? null,
+    webhookUrl,
+  });
+});
+
+router.patch("/settings/whatsapp", requireAuth, async (req, res): Promise<void> => {
+  const { whatsappNumber } = req.body as { whatsappNumber?: string };
+
+  if (!whatsappNumber || whatsappNumber.trim() === "") {
+    await db.update(clinicsTable).set({ whatsappNumber: null }).where(eq(clinicsTable.id, req.clinicId!));
+    res.json({ ok: true, whatsappNumber: null });
+    return;
+  }
+
+  const cleaned = whatsappNumber.trim();
+
+  const [conflict] = await db
+    .select({ id: clinicsTable.id })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.whatsappNumber, cleaned));
+
+  if (conflict && conflict.id !== req.clinicId!) {
+    res.status(409).json({ error: "This WhatsApp number is already linked to another clinic" });
+    return;
+  }
+
+  await db.update(clinicsTable).set({ whatsappNumber: cleaned }).where(eq(clinicsTable.id, req.clinicId!));
+  res.json({ ok: true, whatsappNumber: cleaned });
+});
+
 router.patch("/auth/account", requireAuth, async (req, res): Promise<void> => {
   const { currentPassword, newPassword, newEmail } = req.body as {
     currentPassword: string;

@@ -505,6 +505,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/WhatsappWebhookResponse"
 
+  /settings/whatsapp:
+    get:
+      operationId: getWhatsappSettings
+      tags: [settings]
+      summary: Get the clinic's linked WhatsApp number and webhook URL
+      responses:
+        "200":
+          description: WhatsApp settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappSettings"
+    patch:
+      operationId: updateWhatsappSettings
+      tags: [settings]
+      summary: Link or update the clinic's WhatsApp number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                whatsappNumber:
+                  type: string
+              required:
+                - whatsappNumber
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappSettings"
+        "409":
+          description: Number already in use by another clinic
+
   /conversations/simulate:
     post:
       operationId: simulateWhatsappMessage
@@ -959,11 +996,26 @@ components:
       properties:
         from:
           type: string
+        to:
+          type: string
+          description: The clinic's WhatsApp number this message was sent to (used to identify the clinic)
         message:
           type: string
       required:
         - from
+        - to
         - message
+
+    WhatsappSettings:
+      type: object
+      properties:
+        whatsappNumber:
+          type: ["string", "null"]
+        webhookUrl:
+          type: string
+      required:
+        - whatsappNumber
+        - webhookUrl
 
     WhatsappWebhookResponse:
       type: object

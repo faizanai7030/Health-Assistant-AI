@@ -198,7 +198,15 @@ export interface WhatsAppConversationWithMessages {
 
 export interface WhatsappWebhookBody {
   from: string;
+  /** The clinic's WhatsApp number this message was sent to (used to identify the clinic) */
+  to: string;
   message: string;
+}
+
+export interface WhatsappSettings {
+  /** @nullable */
+  whatsappNumber: string | null;
+  webhookUrl: string;
 }
 
 export interface WhatsappWebhookResponse {
@@ -251,4 +259,8 @@ export type ListRemindersParams = {
    * @nullable
    */
   status?: string | null;
+};
+
+export type UpdateWhatsappSettingsBody = {
+  whatsappNumber: string;
 };

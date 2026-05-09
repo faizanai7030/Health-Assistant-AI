@@ -502,12 +502,37 @@ export const GetConversationResponse = zod.object({
  */
 export const HandleWhatsappWebhookBody = zod.object({
   from: zod.string(),
+  to: zod
+    .string()
+    .describe(
+      "The clinic's WhatsApp number this message was sent to (used to identify the clinic)",
+    ),
   message: zod.string(),
 });
 
 export const HandleWhatsappWebhookResponse = zod.object({
   response: zod.string(),
   conversationId: zod.number(),
+});
+
+/**
+ * @summary Get the clinic's linked WhatsApp number and webhook URL
+ */
+export const GetWhatsappSettingsResponse = zod.object({
+  whatsappNumber: zod.string().nullable(),
+  webhookUrl: zod.string(),
+});
+
+/**
+ * @summary Link or update the clinic's WhatsApp number
+ */
+export const UpdateWhatsappSettingsBody = zod.object({
+  whatsappNumber: zod.string(),
+});
+
+export const UpdateWhatsappSettingsResponse = zod.object({
+  whatsappNumber: zod.string().nullable(),
+  webhookUrl: zod.string(),
 });
 
 /**

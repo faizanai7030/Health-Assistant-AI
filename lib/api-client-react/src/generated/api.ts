@@ -38,8 +38,10 @@ import type {
   UpdateAppointmentBody,
   UpdateDoctorBody,
   UpdateReminderBody,
+  UpdateWhatsappSettingsBody,
   WhatsAppConversation,
   WhatsAppConversationWithMessages,
+  WhatsappSettings,
   WhatsappWebhookBody,
   WhatsappWebhookResponse,
 } from "./api.schemas";
@@ -2213,6 +2215,168 @@ export const useHandleWhatsappWebhook = <
   TContext
 > => {
   return useMutation(getHandleWhatsappWebhookMutationOptions(options));
+};
+
+/**
+ * @summary Get the clinic's linked WhatsApp number and webhook URL
+ */
+export const getGetWhatsappSettingsUrl = () => {
+  return `/api/settings/whatsapp`;
+};
+
+export const getWhatsappSettings = async (
+  options?: RequestInit,
+): Promise<WhatsappSettings> => {
+  return customFetch<WhatsappSettings>(getGetWhatsappSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWhatsappSettingsQueryKey = () => {
+  return [`/api/settings/whatsapp`] as const;
+};
+
+export const getGetWhatsappSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWhatsappSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWhatsappSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWhatsappSettings>>
+  > = ({ signal }) => getWhatsappSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappSettings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWhatsappSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWhatsappSettings>>
+>;
+export type GetWhatsappSettingsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the clinic's linked WhatsApp number and webhook URL
+ */
+
+export function useGetWhatsappSettings<
+  TData = Awaited<ReturnType<typeof getWhatsappSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWhatsappSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Link or update the clinic's WhatsApp number
+ */
+export const getUpdateWhatsappSettingsUrl = () => {
+  return `/api/settings/whatsapp`;
+};
+
+export const updateWhatsappSettings = async (
+  updateWhatsappSettingsBody: UpdateWhatsappSettingsBody,
+  options?: RequestInit,
+): Promise<WhatsappSettings> => {
+  return customFetch<WhatsappSettings>(getUpdateWhatsappSettingsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateWhatsappSettingsBody),
+  });
+};
+
+export const getUpdateWhatsappSettingsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateWhatsappSettings>>,
+    TError,
+    { data: BodyType<UpdateWhatsappSettingsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateWhatsappSettings>>,
+  TError,
+  { data: BodyType<UpdateWhatsappSettingsBody> },
+  TContext
+> => {
+  const mutationKey = ["updateWhatsappSettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateWhatsappSettings>>,
+    { data: BodyType<UpdateWhatsappSettingsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateWhatsappSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateWhatsappSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateWhatsappSettings>>
+>;
+export type UpdateWhatsappSettingsMutationBody =
+  BodyType<UpdateWhatsappSettingsBody>;
+export type UpdateWhatsappSettingsMutationError = ErrorType<void>;
+
+/**
+ * @summary Link or update the clinic's WhatsApp number
+ */
+export const useUpdateWhatsappSettings = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateWhatsappSettings>>,
+    TError,
+    { data: BodyType<UpdateWhatsappSettingsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateWhatsappSettings>>,
+  TError,
+  { data: BodyType<UpdateWhatsappSettingsBody> },
+  TContext
+> => {
+  return useMutation(getUpdateWhatsappSettingsMutationOptions(options));
 };
 
 /**

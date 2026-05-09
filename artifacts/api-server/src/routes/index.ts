@@ -10,6 +10,7 @@ import dashboardRouter from "./dashboard";
 import emergencyRouter from "./emergency";
 import portalRouter from "./portal";
 import remindersRouter from "./reminders";
+import webhookRouter from "./webhook";
 
 const router: IRouter = Router();
 
@@ -18,6 +19,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(portalRouter);
 router.use(superAdminRouter);
+router.use(webhookRouter);
 
 // Protected routes — require clinic login
 router.use(requireAuth);
