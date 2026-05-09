@@ -23,8 +23,11 @@ async function main() {
 
   console.log(`Recording ${RECORD_MS / 1000}s from: ${VIDEO_URL}`);
 
+  // Use the NixOS-native Chromium (has correct RPATH for this system)
+  const NIX_CHROMIUM = '/nix/store/qa9cnw4v5xkxyip6mb9kxqfq1z4x2dx1-chromium-138.0.7204.100/bin/chromium';
   const browser = await chromium.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    executablePath: NIX_CHROMIUM,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   });
 
   const ctx = await browser.newContext({

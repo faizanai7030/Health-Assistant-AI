@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "e5rN_hF7W6klj4lU65rBg"
+uri = "file://artifacts/patient-demo-video/output/demo-video.webm"
+type = "video"
+title = "Clinic AI Demo Video"
