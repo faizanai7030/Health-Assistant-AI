@@ -9,7 +9,6 @@ export function Scene4() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
-      {/* Full chat visible below — dark overlay fades in from bottom */}
       <motion.div
         className="w-full bg-gradient-to-t from-black/95 via-black/80 to-transparent px-6 pt-16 pb-10 text-center"
         initial={{ y: 30, opacity: 0 }}
@@ -18,7 +17,7 @@ export function Scene4() {
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
         <motion.div
-          className="flex items-center justify-center gap-3 mb-2"
+          className="flex items-center justify-center gap-3 mb-3"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
@@ -30,13 +29,23 @@ export function Scene4() {
           </div>
           <h2 className="text-lg font-display font-bold text-white leading-tight">A.I'll Handle It</h2>
         </motion.div>
+
+        <motion.p
+          className="text-[22px] font-display font-semibold text-white leading-tight mb-1"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.5 }}
+        >
+          You just focus on treatments.
+        </motion.p>
+
         <motion.p
           className="text-xs text-[#8696A0] tracking-wide"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.55, duration: 0.5 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
         >
-          Your clinic's WhatsApp AI receptionist
+          We'll handle the bookings.
         </motion.p>
       </motion.div>
     </motion.div>
