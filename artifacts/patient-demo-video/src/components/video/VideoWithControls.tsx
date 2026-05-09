@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Repeat, Volume2, VolumeX } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
 import { startAmbientMusic, setMutedAudio, resumeCtx } from '@/lib/ambient-audio';
+import { RecordButton } from './RecordButton';
 
 const PROGRESS_TICK_MS = 60;
 
@@ -152,6 +153,8 @@ function ControlBar({
 }
 
 export default function VideoWithControls() {
+  const isExport = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('export') === '1';
+
   const {
     sceneKeys,
     activeIndex,
@@ -228,8 +231,15 @@ export default function VideoWithControls() {
         onSceneChange={onSceneChange}
       />
 
-      {/* Tap-to-unmute hint — fades out once audio is running */}
-      {!audioReady && (
+      {/* Download / record button — top left */}
+      {!isExport && (
+        <div className="absolute top-5 left-5 z-50">
+          <RecordButton onRequestReset={() => jumpTo(0)} />
+        </div>
+      )}
+
+      {/* Tap-to-unmute hint — hidden in export mode */}
+      {!audioReady && !isExport && (
         <button
           onClick={startAudio}
           className="absolute top-5 right-5 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/80 text-sm font-medium hover:bg-black/80 hover:text-white transition-all animate-pulse"
@@ -239,30 +249,33 @@ export default function VideoWithControls() {
         </button>
       )}
 
-      <div
-        ref={sensorRef}
-        className="absolute bottom-0 left-0 right-0 z-50 flex flex-col justify-end"
-        style={{ height: '25%' }}
-        onPointerEnter={handlePointerEnter}
-        onPointerLeave={handlePointerLeave}
-        onPointerDown={handlePointerDown}
-      >
-        <div className="flex-1 w-full" aria-hidden="true" />
-        <ControlBar
-          visible={barVisible}
-          collapsed={collapsed}
-          locked={locked}
-          muted={muted}
-          sceneKeys={sceneKeys}
-          activeIndex={activeIndex}
-          activeDuration={activeDuration}
-          tick={tick}
-          onToggleLock={toggleLock}
-          onJumpTo={jumpTo}
-          onToggleCollapsed={handleToggleCollapsed}
-          onToggleMute={handleToggleMute}
-        />
-      </div>
+      {/* Controls bar — hidden in export mode */}
+      {!isExport && (
+        <div
+          ref={sensorRef}
+          className="absolute bottom-0 left-0 right-0 z-50 flex flex-col justify-end"
+          style={{ height: '25%' }}
+          onPointerEnter={handlePointerEnter}
+          onPointerLeave={handlePointerLeave}
+          onPointerDown={handlePointerDown}
+        >
+          <div className="flex-1 w-full" aria-hidden="true" />
+          <ControlBar
+            visible={barVisible}
+            collapsed={collapsed}
+            locked={locked}
+            muted={muted}
+            sceneKeys={sceneKeys}
+            activeIndex={activeIndex}
+            activeDuration={activeDuration}
+            tick={tick}
+            onToggleLock={toggleLock}
+            onJumpTo={jumpTo}
+            onToggleCollapsed={handleToggleCollapsed}
+            onToggleMute={handleToggleMute}
+          />
+        </div>
+      )}
     </div>
   );
 }
