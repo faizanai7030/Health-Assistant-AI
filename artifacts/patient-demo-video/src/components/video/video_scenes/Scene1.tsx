@@ -1,45 +1,71 @@
-import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { sceneTransitions } from '../../lib/video/animations';
+import { motion } from 'framer-motion';
 
 export function Scene1() {
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 300), // First message appears
-      setTimeout(() => setPhase(2), 1000), // Second message appears
+      setTimeout(() => setPhase(1), 500),  // Patient msg
+      setTimeout(() => setPhase(2), 1500), // Priya typing
+      setTimeout(() => setPhase(3), 3000), // Priya msg
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
 
   return (
-    <motion.div className="absolute inset-0 z-20" {...sceneTransitions.crossDissolve}>
-      
-      {/* Right Side Graphics */}
-      <div className="absolute right-0 w-[55vw] h-full flex flex-col justify-center px-12">
-        <motion.h1 
-          className="text-[4.5vw] font-display font-bold text-white leading-tight"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        >
-          Never miss<br/>another booking.
-        </motion.h1>
-      </div>
-
-      {/* Inside Phone Content */}
-      <div className="absolute top-1/2 left-[15vw] -translate-y-1/2 w-[340px] h-[600px] mt-10 p-4 flex flex-col gap-4 overflow-hidden pointer-events-none">
+    <motion.div 
+      className="flex flex-col gap-3 w-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 1 }}
+    >
+      {/* Patient Msg 1 */}
+      {phase >= 1 && (
         <motion.div 
-          className="bg-primary rounded-xl rounded-tr-none p-3 self-end max-w-[85%] chat-bubble-right relative shadow-md"
-          initial={{ opacity: 0, scale: 0.8, y: 20, transformOrigin: 'top right' }}
-          animate={phase >= 1 ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.8, y: 20 }}
+          className="self-end max-w-[85%] relative chat-bubble-right"
+          initial={{ opacity: 0, scale: 0.9, y: 10, transformOrigin: 'top right' }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <p className="text-sm font-body text-bg-dark font-medium">Hi, I want to book an appointment.</p>
-          <span className="text-[10px] text-bg-dark/60 absolute bottom-1 right-2">10:00 AM</span>
+          <div className="bg-msg-out rounded-lg rounded-tr-none px-3 py-2 text-[15px] shadow-sm">
+            Hi, I need to book an appointment with Dr. Sharma
+            <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:42 AM</div>
+          </div>
         </motion.div>
-      </div>
+      )}
+
+      {/* Priya Typing */}
+      {phase === 2 && (
+        <motion.div 
+          className="self-start max-w-[85%] relative chat-bubble-left"
+          initial={{ opacity: 0, scale: 0.9, transformOrigin: 'top left' }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="bg-msg-in rounded-lg rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1.5 h-10">
+            <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+            <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+            <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
+          </div>
+        </motion.div>
+      )}
+
+      {/* Priya Msg 1 */}
+      {phase >= 3 && (
+        <motion.div 
+          className="self-start max-w-[85%] relative chat-bubble-left"
+          initial={{ opacity: 0, scale: 0.9, y: 10, transformOrigin: 'top left' }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
+          <div className="bg-msg-in rounded-lg rounded-tl-none px-3 py-2 text-[15px] shadow-sm text-text-primary leading-snug">
+            Hello! I'd be happy to help you book an appointment with Dr. Sharma. Which date works for you?
+            <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:42 AM</div>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

@@ -6,13 +6,16 @@
   --color-accent: #075E54;
 
   --color-bg-light: #FFFFFF;
-  --color-bg-dark: #0b1411;
-  --color-bg-muted: #16241e;
+  --color-bg-dark: #111B21; /* WhatsApp dark theme bg */
+  --color-bg-muted: #1F2C33;
 
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #9CA3AF;
+  --color-msg-out: #005C4B; /* Patient message */
+  --color-msg-in: #1F2C33; /* Priya message */
+
+  --color-text-primary: #E9EDEF;
+  --color-text-secondary: #8696A0;
   --color-text-muted: #6B7280;
-  --color-text-inverse: #000000;
+  --color-text-inverse: #111B21;
 
   --font-display: 'Outfit', sans-serif;
   --font-body: 'Inter', sans-serif;
@@ -25,6 +28,8 @@
   --color-bg-light: var(--color-bg-light);
   --color-bg-dark: var(--color-bg-dark);
   --color-bg-muted: var(--color-bg-muted);
+  --color-msg-out: var(--color-msg-out);
+  --color-msg-in: var(--color-msg-in);
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
@@ -37,11 +42,10 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-bg-dark);
+  background-color: #050a08;
   color: var(--color-text-primary);
 }
 
-/* Chat bubble tail for WhatsApp style */
 .chat-bubble-left::before {
   content: '';
   position: absolute;
@@ -49,8 +53,8 @@ body {
   left: -8px;
   width: 0;
   height: 0;
-  border-top: 10px solid #1f2c27;
-  border-left: 10px solid transparent;
+  border-top: 12px solid var(--color-msg-in);
+  border-left: 12px solid transparent;
 }
 
 .chat-bubble-right::before {
@@ -60,6 +64,12 @@ body {
   right: -8px;
   width: 0;
   height: 0;
-  border-top: 10px solid var(--color-primary);
-  border-right: 10px solid transparent;
+  border-top: 12px solid var(--color-msg-out);
+  border-right: 12px solid transparent;
+}
+
+/* WhatsApp Doodle Background Pattern */
+.bg-whatsapp-doodle {
+  background-color: var(--color-bg-dark);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23128C7E' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }

@@ -1,86 +1,98 @@
-import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { sceneTransitions } from '../../lib/video/animations';
+import { motion } from 'framer-motion';
 
 export function Scene3() {
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 300), // Patient reply
-      setTimeout(() => setPhase(2), 1200), // AI processing / Calendar
+      setTimeout(() => setPhase(1), 500),  // Patient msg
+      setTimeout(() => setPhase(2), 1500), // Priya typing
+      setTimeout(() => setPhase(3), 3000), // Priya card
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
 
   return (
-    <motion.div className="absolute inset-0 z-20" {...sceneTransitions.crossDissolve}>
-      
-      {/* Right Side Graphics */}
-      <div className="absolute right-0 w-[55vw] h-full flex flex-col justify-center px-12">
-        <motion.h1 
-          className="text-[4vw] font-display font-bold text-white leading-tight relative"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        >
-          Checks availability<br/>
-          <span className="text-primary">in seconds.</span>
-          
-          {/* Calendar Animation Graphic */}
-          <motion.div 
-            className="absolute top-0 right-[10%] w-32 h-32"
-            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-            animate={phase >= 2 ? { opacity: 1, scale: 1, rotate: 0 } : { opacity: 0, scale: 0.5, rotate: -20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          >
-            <div className="w-full h-full bg-[#16241e] border-2 border-primary/30 rounded-2xl p-3 flex flex-col gap-2 shadow-2xl">
-              <div className="flex justify-between items-center px-1">
-                <div className="w-8 h-2 bg-primary/50 rounded-full" />
-                <div className="w-4 h-4 bg-primary rounded-sm" />
+    <motion.div
+      className="flex flex-col gap-3 w-full"
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* Persisted earlier messages */}
+      <motion.div className="self-end max-w-[85%] relative chat-bubble-right">
+        <div className="bg-msg-out rounded-lg rounded-tr-none px-3 py-2 text-[15px] shadow-sm">
+          Tomorrow morning if possible
+          <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:43 AM</div>
+        </div>
+      </motion.div>
+      <motion.div className="self-start max-w-[85%] relative chat-bubble-left">
+        <div className="bg-msg-in rounded-lg rounded-tl-none px-3 py-2 text-[15px] shadow-sm text-text-primary leading-snug">
+          Great! Dr. Sharma has a slot available tomorrow at 10:30 AM. Shall I confirm the booking?
+          <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:43 AM</div>
+        </div>
+      </motion.div>
+
+      {/* Patient Msg — Yes please */}
+      <motion.div
+        className="self-end max-w-[85%] relative chat-bubble-right"
+        initial={{ opacity: 0, scale: 0.9, y: 10, transformOrigin: 'top right' }}
+        animate={phase >= 1 ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      >
+        <div className="bg-msg-out rounded-lg rounded-tr-none px-3 py-2 text-[15px] shadow-sm">
+          Yes please
+          <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:44 AM</div>
+        </div>
+      </motion.div>
+
+      {/* Priya Typing */}
+      <motion.div
+        className="self-start max-w-[85%] relative chat-bubble-left"
+        initial={{ opacity: 0, scale: 0.9, transformOrigin: 'top left' }}
+        animate={phase === 2 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="bg-msg-in rounded-lg rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1.5 h-10">
+          <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+          <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+          <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
+        </div>
+      </motion.div>
+
+      {/* Booking Confirmation Card */}
+      <motion.div
+        className="self-start max-w-[90%] relative chat-bubble-left"
+        initial={{ opacity: 0, scale: 0.9, y: 10, transformOrigin: 'top left' }}
+        animate={phase >= 3 ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      >
+        <div className="bg-msg-in rounded-lg rounded-tl-none p-1 shadow-sm text-text-primary leading-snug w-64">
+          <div className="bg-[#182229] rounded p-3 mb-1">
+            <h3 className="font-bold text-white text-[15px] mb-1 flex items-center gap-1.5">
+              <span className="text-[#25D366]">✅</span> Appointment Confirmed!
+            </h3>
+            <p className="text-xs text-text-secondary mb-2">City Care Clinic</p>
+            <div className="space-y-1.5 mt-2">
+              <div className="flex gap-2 text-sm">
+                <span className="text-text-secondary w-14 shrink-0">Doctor</span>
+                <span className="text-white font-medium">Dr. Sharma</span>
               </div>
-              <div className="grid grid-cols-4 gap-1.5 mt-2">
-                {[...Array(12)].map((_, i) => (
-                  <motion.div 
-                    key={i} 
-                    className={`h-4 rounded-sm ${i === 6 ? 'bg-primary' : 'bg-white/5'}`}
-                    initial={{ scale: 0 }}
-                    animate={phase >= 2 ? { scale: 1 } : { scale: 0 }}
-                    transition={{ delay: 0.2 + (i * 0.05) }}
-                  />
-                ))}
+              <div className="flex gap-2 text-sm">
+                <span className="text-text-secondary w-14 shrink-0">Time</span>
+                <span className="text-white">Tomorrow, 10:30 AM</span>
+              </div>
+              <div className="flex gap-2 text-sm">
+                <span className="text-text-secondary w-14 shrink-0">Token</span>
+                <span className="text-[#25D366] font-bold text-base">#7</span>
               </div>
             </div>
-          </motion.div>
-        </motion.h1>
-      </div>
-
-      {/* Inside Phone Content - Shifted up */}
-      <div className="absolute top-1/2 left-[15vw] -translate-y-1/2 w-[340px] h-[600px] mt-10 p-4 flex flex-col gap-4 overflow-hidden pointer-events-none justify-end pb-20">
-        
-        {/* AI Reply (Persisted but shifted) */}
-        <motion.div 
-          className="bg-[#1f2c27] rounded-xl rounded-tl-none p-3 pb-5 self-start max-w-[85%] chat-bubble-left relative shadow-md border border-white/5"
-          initial={{ y: 50 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <p className="text-sm font-body text-white/90 leading-relaxed">Hello! I'm Priya. I'd be happy to help you book an appointment. Which doctor would you like to see, and what time works best for you today?</p>
-          <span className="text-[10px] text-text-secondary absolute bottom-1 right-2">10:00 AM</span>
-        </motion.div>
-
-        {/* Patient Reply */}
-        <motion.div 
-          className="bg-primary rounded-xl rounded-tr-none p-3 pb-4 self-end max-w-[85%] chat-bubble-right relative shadow-md"
-          initial={{ opacity: 0, scale: 0.8, y: 20, transformOrigin: 'top right' }}
-          animate={phase >= 1 ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.8, y: 20 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          <p className="text-sm font-body text-bg-dark font-medium">Dr. Sharma at 5 PM please.</p>
-          <span className="text-[10px] text-bg-dark/60 absolute bottom-1 right-2">10:01 AM</span>
-        </motion.div>
-
-      </div>
+          </div>
+          <div className="text-[10px] text-text-secondary text-right px-2 pb-1">10:44 AM</div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
