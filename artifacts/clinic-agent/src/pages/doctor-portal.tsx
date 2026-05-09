@@ -216,7 +216,7 @@ export default function DoctorPortal() {
         </div>
 
         <div className="mt-8 text-center">
-          <p className="text-xs text-gray-300">Doctor Portal • I'll Handle It</p>
+          <p className="text-xs text-gray-300">Doctor Portal • A.I'll Handle It</p>
         </div>
       </div>
     </div>
