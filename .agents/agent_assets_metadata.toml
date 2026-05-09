@@ -6,3 +6,9 @@ id = "e5rN_hF7W6klj4lU65rBg"
 uri = "file://artifacts/patient-demo-video/output/demo-video.webm"
 type = "video"
 title = "Clinic AI Demo Video"
+
+[[outputs]]
+id = "mPqzr9Qk4o6m7Qi45al3-"
+uri = "file://artifacts/patient-demo-video/output/demo-video.mp4"
+type = "video"
+title = "Clinic AI Demo — Full Video with Music"
