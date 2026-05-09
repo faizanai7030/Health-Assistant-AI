@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSuperAdmin, SUPER_ADMIN_API } from "@/lib/super-admin-auth";
-import { Shield, Plus, Building2, Users, Calendar, CheckCircle2, XCircle, LogOut, Pencil, X, Search } from "lucide-react";
+import { Shield, Plus, Building2, Users, Calendar, CheckCircle2, XCircle, LogOut, Pencil, X, Search, Copy, Check, MessageSquare, Mail, Lock, Link } from "lucide-react";
 
 interface Clinic {
   id: number;
