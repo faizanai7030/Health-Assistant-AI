@@ -1,71 +1,48 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { sceneTransitions } from '@/lib/video/animations';
 
 export function Scene1() {
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 500),  // Patient msg
-      setTimeout(() => setPhase(2), 1500), // Priya typing
-      setTimeout(() => setPhase(3), 3000), // Priya msg
+      setTimeout(() => setPhase(1), 600),
+      setTimeout(() => setPhase(2), 1400),
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
 
   return (
     <motion.div 
-      className="flex flex-col gap-3 w-full"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 1 }}
+      className="absolute inset-0 flex flex-col items-center justify-center text-center px-[5vw] z-10"
+      {...sceneTransitions.fadeBlur}
     >
-      {/* Patient Msg 1 */}
-      {phase >= 1 && (
-        <motion.div 
-          className="self-end max-w-[85%] relative chat-bubble-right"
-          initial={{ opacity: 0, scale: 0.9, y: 10, transformOrigin: 'top right' }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          <div className="bg-msg-out rounded-lg rounded-tr-none px-3 py-2 text-[15px] shadow-sm">
-            Hi, I need to book an appointment with Dr. Sharma
-            <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:42 AM</div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Priya Typing */}
-      {phase === 2 && (
-        <motion.div 
-          className="self-start max-w-[85%] relative chat-bubble-left"
-          initial={{ opacity: 0, scale: 0.9, transformOrigin: 'top left' }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className="bg-msg-in rounded-lg rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1.5 h-10">
-            <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-            <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
-            <motion.div className="w-1.5 h-1.5 bg-text-secondary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
-          </div>
-        </motion.div>
-      )}
-
-      {/* Priya Msg 1 */}
-      {phase >= 3 && (
-        <motion.div 
-          className="self-start max-w-[85%] relative chat-bubble-left"
-          initial={{ opacity: 0, scale: 0.9, y: 10, transformOrigin: 'top left' }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          <div className="bg-msg-in rounded-lg rounded-tl-none px-3 py-2 text-[15px] shadow-sm text-text-primary leading-snug">
-            Hello! I'd be happy to help you book an appointment with Dr. Sharma. Which date works for you?
-            <div className="text-[10px] text-text-secondary text-right mt-1 -mb-1">10:42 AM</div>
-          </div>
-        </motion.div>
-      )}
+      <motion.div
+        className="flex items-center justify-center gap-4 mb-6"
+        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-[8vw] h-[8vw] max-w-[80px] max-h-[80px] bg-[#25D366] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(37,211,102,0.3)]">
+          <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="#111B21" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a10 10 0 1 0 10 10H12V2Z"/><path d="M12 12 2.1 12"/><path d="M12 12 21.9 21.9"/>
+          </svg>
+        </div>
+        <h1 className="font-display font-bold text-[8vw] sm:text-[6vw] tracking-tight leading-none text-white">
+          A.I'll Handle It
+        </h1>
+      </motion.div>
+      
+      <motion.div
+        initial={{ opacity: 0, filter: 'blur(10px)', y: 20 }}
+        animate={phase >= 1 ? { opacity: 1, filter: 'blur(0px)', y: 0 } : { opacity: 0, filter: 'blur(10px)', y: 20 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <p className="font-body text-[4vw] sm:text-[3vw] md:text-[2vw] text-[#8696A0] font-medium tracking-wide">
+          You just focus on treatments.
+        </p>
+      </motion.div>
     </motion.div>
   );
 }
