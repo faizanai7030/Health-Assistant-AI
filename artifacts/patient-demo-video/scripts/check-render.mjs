@@ -1,4 +1,4 @@
-import { chromium } from '/home/runner/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
+import { chromium } from '/home/runner/.npm/_npx/0cf6ff1fad43f633/node_modules/playwright/index.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 

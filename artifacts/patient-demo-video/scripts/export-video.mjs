@@ -1,5 +1,5 @@
 // Playwright screen-recording export for the demo video
-import { chromium } from '/home/runner/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
+import { chromium } from '/home/runner/.npm/_npx/0cf6ff1fad43f633/node_modules/playwright/index.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -27,7 +27,17 @@ async function main() {
   const NIX_CHROMIUM = '/nix/store/qa9cnw4v5xkxyip6mb9kxqfq1z4x2dx1-chromium-138.0.7204.100/bin/chromium';
   const browser = await chromium.launch({
     executablePath: NIX_CHROMIUM,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--enable-unsafe-swiftshader',
+      // Prevent headless timer throttling — crucial for animation timing
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-ipc-flooding-protection',
+    ],
   });
 
   const ctx = await browser.newContext({
@@ -41,6 +51,10 @@ async function main() {
   const page = await ctx.newPage();
 
   await page.goto(VIDEO_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+
+  // Warm-up: let fonts, CSS, and first scene fully render before the video clock starts
+  console.log('Warming up (3s)...');
+  await page.waitForTimeout(3_000);
   console.log('Page loaded — recording...');
 
   // Tick progress every 10 seconds
