@@ -1,5 +1,5 @@
 // Playwright screen-recording export for the demo video
-import { chromium } from '/home/runner/.npm/_npx/0cf6ff1fad43f633/node_modules/playwright/index.mjs';
+import { chromium } from '/home/runner/.npm/_npx/0cf6ff1fad43f633/node_modules/playwright-core/index.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
