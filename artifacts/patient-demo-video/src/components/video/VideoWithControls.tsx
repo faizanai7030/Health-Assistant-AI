@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Repeat, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, Repeat, Volume2, VolumeX } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
 import { startAmbientMusic, setMutedAudio, resumeCtx } from '@/lib/ambient-audio';
-import { RecordButton } from './RecordButton';
 
 const PROGRESS_TICK_MS = 60;
 
@@ -231,11 +230,17 @@ export default function VideoWithControls() {
         onSceneChange={onSceneChange}
       />
 
-      {/* Download / record button — top left */}
+      {/* Download button — top left */}
       {!isExport && (
-        <div className="absolute top-5 left-5 z-50">
-          <RecordButton onRequestReset={() => jumpTo(0)} />
-        </div>
+        <a
+          href="/patient-demo-video/demo-video.mp4"
+          download="clinic-ai-demo.mp4"
+          className="absolute top-5 left-5 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/80 text-sm font-medium hover:bg-black/80 hover:text-white transition-all"
+          onClick={e => e.stopPropagation()}
+        >
+          <Download className="w-4 h-4" />
+          Download Video
+        </a>
       )}
 
       {/* Tap-to-unmute hint — hidden in export mode */}
