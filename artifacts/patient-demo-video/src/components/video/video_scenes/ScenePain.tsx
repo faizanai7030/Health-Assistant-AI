@@ -54,7 +54,7 @@ export function ScenePain() {
         {phase === 1 && (
           <motion.div
             key="problem"
-            className="w-full flex flex-col items-center gap-[3vw]"
+            className="w-full flex flex-col items-center gap-[1.5vw]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, y: -30 }}
@@ -62,7 +62,7 @@ export function ScenePain() {
           >
             {/* Question */}
             <motion.p
-              className="text-[3.5vw] font-semibold text-center text-[#8696A0] leading-snug"
+              className="text-[2.8vw] font-semibold text-center text-[#8696A0] leading-snug"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -70,7 +70,7 @@ export function ScenePain() {
               Still relying on a human receptionist...
             </motion.p>
             <motion.h2
-              className="text-[5vw] font-bold text-center text-white leading-tight"
+              className="text-[4vw] font-bold text-center text-white leading-tight"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -79,19 +79,19 @@ export function ScenePain() {
             </motion.h2>
 
             {/* Pain points */}
-            <div className="flex flex-col gap-[1.8vw] mt-[1vw] w-full max-w-[55vw]">
+            <div className="flex flex-col gap-[1.1vw] w-full max-w-[58vw]">
               {PROBLEMS.map((p, i) => (
                 <AnimatePresence key={i}>
                   {visibleProblems > i && (
                     <motion.div
-                      className="flex items-center gap-[2vw] bg-red-950/30 border border-red-900/40 rounded-[1.2vw] px-[2.5vw] py-[1.2vw]"
+                      className="flex items-center gap-[2vw] bg-red-950/30 border border-red-900/40 rounded-[1vw] px-[2.5vw] py-[0.8vw]"
                       initial={{ opacity: 0, x: -30 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
                     >
-                      <span className="text-[3vw]">{p.icon}</span>
-                      <span className="text-[2.6vw] text-red-300 font-medium">{p.text}</span>
-                      <span className="ml-auto text-[2.4vw] text-red-500 font-bold">✗</span>
+                      <span className="text-[2.4vw]">{p.icon}</span>
+                      <span className="text-[2.2vw] text-red-300 font-medium">{p.text}</span>
+                      <span className="ml-auto text-[2vw] text-red-500 font-bold">✗</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -104,7 +104,7 @@ export function ScenePain() {
         {phase === 2 && (
           <motion.div
             key="solution"
-            className="w-full flex flex-col items-center gap-[3vw]"
+            className="w-full flex flex-col items-center gap-[1.5vw]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -112,7 +112,7 @@ export function ScenePain() {
           >
             {/* Pivot heading */}
             <motion.p
-              className="text-[3.5vw] font-semibold text-center text-[#8696A0] leading-snug"
+              className="text-[2.8vw] font-semibold text-center text-[#8696A0] leading-snug"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -120,7 +120,7 @@ export function ScenePain() {
               Your AI receptionist is —
             </motion.p>
             <motion.h2
-              className="text-[5vw] font-bold text-center text-[#25D366] leading-tight"
+              className="text-[4vw] font-bold text-center text-[#25D366] leading-tight"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.15 }}
@@ -129,18 +129,18 @@ export function ScenePain() {
             </motion.h2>
 
             {/* Solutions */}
-            <div className="flex flex-col gap-[1.8vw] mt-[1vw] w-full max-w-[55vw]">
+            <div className="flex flex-col gap-[1.1vw] w-full max-w-[58vw]">
               {SOLUTIONS.map((s, i) => (
                 <AnimatePresence key={i}>
                   {visibleSolutions > i && (
                     <motion.div
-                      className="flex items-center gap-[2vw] bg-[#25D366]/10 border border-[#25D366]/30 rounded-[1.2vw] px-[2.5vw] py-[1.2vw]"
+                      className="flex items-center gap-[2vw] bg-[#25D366]/10 border border-[#25D366]/30 rounded-[1vw] px-[2.5vw] py-[0.8vw]"
                       initial={{ opacity: 0, x: 30 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
                     >
-                      <span className="text-[3vw]">{s.icon}</span>
-                      <span className="text-[2.6vw] text-[#25D366] font-medium">{s.text}</span>
+                      <span className="text-[2.4vw]">{s.icon}</span>
+                      <span className="text-[2.2vw] text-[#25D366] font-medium">{s.text}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>

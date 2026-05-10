@@ -19,22 +19,19 @@ async function main() {
 
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await ctx.newPage();
-
   await page.goto('http://localhost:80/patient-demo-video/?export=1', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
-  await page.screenshot({ path: `${OUT}/frame-03s.png` });
 
-  await page.waitForTimeout(7000); // ~10s total
-  await page.screenshot({ path: `${OUT}/frame-10s.png` });
+  // Pain scene starts at 6s, all 5 solutions appear at 6+10.5+8.5 = ~25s from load
+  await page.waitForTimeout(22000); // 25s total — all 5 solution bullets visible
+  await page.screenshot({ path: `${OUT}/solutions-all5.png` });
 
-  await page.waitForTimeout(20000); // ~30s total
-  await page.screenshot({ path: `${OUT}/frame-30s.png` });
-
-  await page.waitForTimeout(30000); // ~60s total
-  await page.screenshot({ path: `${OUT}/frame-60s.png` });
+  // Phase 3 tagline (6+20.3 = ~26.3s from load)
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `${OUT}/solutions-tagline.png` });
 
   await browser.close();
-  console.log('Done — check output/ for frames');
+  console.log('Done');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
