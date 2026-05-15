@@ -63,6 +63,10 @@ app.use(
   })
 );
 
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use("/api", generalLimiter);
 app.use("/api", router);
 
