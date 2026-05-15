@@ -57,7 +57,7 @@ export default function Appointments() {
     undefined,
     { query: { queryKey: getListAppointmentsQueryKey(), refetchInterval: 15000 } }
   );
-  const { data: doctors } = useListDoctors();
+  const { data: doctors } = useListDoctors({ query: { refetchInterval: 5000 } });
   const updateApt = useUpdateAppointment();
   const createApt = useCreateAppointment();
   const deleteApt = useDeleteAppointment();
@@ -139,8 +139,8 @@ export default function Appointments() {
     }
   };
 
-  const doctorFilters = appointments
-    ? Array.from(new Map(appointments.map((a) => [a.doctorName, a.doctorSpecialization])).entries())
+  const doctorFilters = doctors
+    ? doctors.map((d) => [d.name, d.specialization] as [string, string])
     : [];
 
   const filtered = selectedDoctor === "all"
