@@ -11,6 +11,7 @@ import { logger } from "./lib/logger";
 const PgSession = connectPgSimple(session);
 
 const app: Express = express();
+app.set("etag", false);
 
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
