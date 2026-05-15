@@ -239,7 +239,7 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
 
   const response = await withRetry(() =>
     openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       max_completion_tokens: 600,
       messages,
     })
