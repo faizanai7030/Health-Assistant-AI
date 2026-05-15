@@ -197,8 +197,9 @@ ${availabilityDayAfter}
 4. If a doctor has EMERGENCY - NOT COMING TODAY: apologize and suggest another doctor or another day
 5. If a doctor has EMERGENCY - WILL BE LATE: mention this to the patient before booking early slots
 6. When the patient says a time, check the availability info: round to the nearest valid slot boundary and confirm if it's free. If that slot is full, suggest the next available time naturally in conversation.
-7. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
-8. After booking, give them a warm confirmation with all the details
+7. If a doctor is FULLY BOOKED for the requested date: check the availability shown for tomorrow and day after — then tell the patient the next available date naturally. Example: "Today is fully booked for Dr. X, but she has slots available tomorrow. Would you like to book for tomorrow instead?"
+8. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
+9. After booking, give them a warm confirmation with all the details
 
 ━━━ CANCELLATION ━━━
 If a patient asks to cancel their appointment:

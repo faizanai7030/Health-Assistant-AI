@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Clock, Plus, Trash2 } from "lucide-react";
+import { Calendar, Clock, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { z } from "zod";
@@ -46,10 +46,13 @@ const walkinSchema = z.object({
 });
 type WalkinForm = z.infer<typeof walkinSchema>;
 
+const todayStr = new Date().toISOString().split("T")[0];
+
 export default function Appointments() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedDoctor, setSelectedDoctor] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [showWalkin, setShowWalkin] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -143,9 +146,27 @@ export default function Appointments() {
     ? doctors.map((d) => [d.name, d.specialization] as [string, string])
     : [];
 
-  const filtered = selectedDoctor === "all"
-    ? appointments
-    : appointments?.filter((a) => a.doctorName === selectedDoctor);
+  const isToday = selectedDate === todayStr;
+
+  const dateFiltered = appointments?.filter((a) => a.appointmentDate === selectedDate) ?? [];
+
+  const filtered = (selectedDoctor === "all"
+    ? dateFiltered
+    : dateFiltered.filter((a) => a.doctorName === selectedDoctor)
+  ).sort((a, b) => a.timeSlot.localeCompare(b.timeSlot));
+
+  const prevDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDoctor("all");
+  };
+  const nextDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDoctor("all");
+  };
 
   return (
     <div className="space-y-6">
@@ -158,6 +179,35 @@ export default function Appointments() {
           <Plus className="mr-2 h-4 w-4" />
           Book Walk-in
         </Button>
+      </div>
+
+      {/* Date navigation */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button variant="outline" size="icon" onClick={prevDay} className="h-9 w-9">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => { setSelectedDate(e.target.value); setSelectedDoctor("all"); }}
+            className="w-40 h-9"
+          />
+          {isToday ? (
+            <Badge className="bg-primary text-primary-foreground">Today</Badge>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => { setSelectedDate(todayStr); setSelectedDoctor("all"); }}>
+              Go to Today
+            </Button>
+          )}
+        </div>
+        <Button variant="outline" size="icon" onClick={nextDay} className="h-9 w-9">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          {format(parseISO(selectedDate), "EEEE, d MMMM yyyy")}
+          {" · "}<span className="font-medium">{dateFiltered.length} appointment{dateFiltered.length !== 1 ? "s" : ""}</span>
+        </span>
       </div>
 
       {/* Walk-in Dialog */}
@@ -255,10 +305,10 @@ export default function Appointments() {
             }`}
           >
             All Doctors
-            <span className="ml-2 text-xs opacity-70">({appointments?.length ?? 0})</span>
+            <span className="ml-2 text-xs opacity-70">({dateFiltered.length})</span>
           </button>
           {doctorFilters.map(([name, spec]) => {
-            const count = appointments?.filter((a) => a.doctorName === name).length ?? 0;
+            const count = dateFiltered.filter((a) => a.doctorName === name).length;
             return (
               <button
                 key={name}
