@@ -144,13 +144,13 @@ export async function processWhatsAppMessage(
   conversationHistory: ConversationMessage[]
 ): Promise<{ reply: string; appointmentBooked: boolean; patientName: string | null; appointmentCancelled: boolean }> {
   const today = new Date().toISOString().split("T")[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
-  const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString().split("T")[0];
+  const nextDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.now() + i * 86400000);
+    return d.toISOString().split("T")[0];
+  });
 
-  const [availabilityToday, availabilityTomorrow, availabilityDayAfter, doctors, patientAppointments] = await Promise.all([
-    getAvailabilityContext(clinicId, today),
-    getAvailabilityContext(clinicId, tomorrow),
-    getAvailabilityContext(clinicId, dayAfter),
+  const [availabilities, doctors, patientAppointments] = await Promise.all([
+    Promise.all(nextDays.map((d) => getAvailabilityContext(clinicId, d))),
     db.select().from(doctorsTable).where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true))),
     getPatientUpcomingAppointments(clinicId, patientPhone),
   ]);
@@ -174,11 +174,7 @@ ${patientAppointmentsSection}
 Doctors at this clinic:
 ${doctorList}
 
-${availabilityToday}
-
-${availabilityTomorrow}
-
-${availabilityDayAfter}
+${availabilities.join("\n\n")}
 
 ━━━ HOW YOU TALK ━━━
 - Sound like a real human typing on WhatsApp, not a robot
@@ -197,9 +193,10 @@ ${availabilityDayAfter}
 4. If a doctor has EMERGENCY - NOT COMING TODAY: apologize and suggest another doctor or another day
 5. If a doctor has EMERGENCY - WILL BE LATE: mention this to the patient before booking early slots
 6. When the patient says a time, check the availability info: round to the nearest valid slot boundary and confirm if it's free. If that slot is full, suggest the next available time naturally in conversation.
-7. If a doctor is FULLY BOOKED for the requested date: check the availability shown for tomorrow and day after — then tell the patient the next available date naturally. Example: "Today is fully booked for Dr. X, but she has slots available tomorrow. Would you like to book for tomorrow instead?"
-8. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
-9. After booking, give them a warm confirmation with all the details
+7. If NO doctors are working on the requested date (e.g. Sunday / holiday): look through the next 7 days of availability shown above and tell the patient the next date when doctors ARE available. Be specific — name the date. Example: "Sunday is a holiday for the clinic, but Dr. X is available on Monday (17th). Want to book then?"
+8. If a doctor is FULLY BOOKED for the requested date: check the next 7 days of availability shown above and tell the patient the next date that doctor has open slots. Example: "Dr. X is fully booked on the 16th, but has slots open on the 17th. Want to book then?"
+9. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
+10. After booking, give them a warm confirmation with all the details
 
 ━━━ CANCELLATION ━━━
 If a patient asks to cancel their appointment:
