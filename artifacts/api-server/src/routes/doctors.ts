@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, doctorsTable } from "@workspace/db";
+import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable } from "@workspace/db";
 import {
   CreateDoctorBody,
   UpdateDoctorBody,
@@ -11,7 +11,6 @@ import {
   GetDoctorAvailabilityQueryParams,
 } from "@workspace/api-zod";
 import { sql, and } from "drizzle-orm";
-import { appointmentsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -99,8 +98,13 @@ router.delete("/doctors/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const doctorId = params.data.id;
+  await db.delete(appointmentsTable)
+    .where(and(eq(appointmentsTable.doctorId, doctorId), eq(appointmentsTable.clinicId, clinicId)));
+  await db.delete(doctorEmergenciesTable)
+    .where(and(eq(doctorEmergenciesTable.doctorId, doctorId), eq(doctorEmergenciesTable.clinicId, clinicId)));
   const [doctor] = await db.delete(doctorsTable)
-    .where(and(eq(doctorsTable.id, params.data.id), eq(doctorsTable.clinicId, clinicId)))
+    .where(and(eq(doctorsTable.id, doctorId), eq(doctorsTable.clinicId, clinicId)))
     .returning();
   if (!doctor) {
     res.status(404).json({ error: "Doctor not found" });
