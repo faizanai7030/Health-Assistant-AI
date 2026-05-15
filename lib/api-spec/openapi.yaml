@@ -163,6 +163,70 @@ paths:
         "204":
           description: Deleted
 
+  /doctors/{id}/leaves:
+    get:
+      operationId: listDoctorLeaves
+      tags: [doctors]
+      summary: List all leave dates for a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of leave dates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DoctorLeave"
+    post:
+      operationId: addDoctorLeave
+      tags: [doctors]
+      summary: Add a leave date for a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDoctorLeaveBody"
+      responses:
+        "201":
+          description: Leave date added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorLeave"
+
+  /doctors/{id}/leaves/{leaveId}:
+    delete:
+      operationId: deleteDoctorLeave
+      tags: [doctors]
+      summary: Remove a leave date for a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: leaveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Leave date removed
+
   /doctors/{id}/availability:
     get:
       operationId: getDoctorAvailability
@@ -690,6 +754,38 @@ components:
           type: ["string", "null"]
         isActive:
           type: ["boolean", "null"]
+
+    DoctorLeave:
+      type: object
+      properties:
+        id:
+          type: integer
+        doctorId:
+          type: integer
+        clinicId:
+          type: integer
+        leaveDate:
+          type: string
+        reason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - doctorId
+        - clinicId
+        - leaveDate
+        - createdAt
+
+    CreateDoctorLeaveBody:
+      type: object
+      properties:
+        leaveDate:
+          type: string
+        reason:
+          type: ["string", "null"]
+      required:
+        - leaveDate
 
     DoctorEmergency:
       type: object

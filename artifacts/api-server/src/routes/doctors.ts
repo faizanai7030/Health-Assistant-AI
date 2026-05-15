@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable } from "@workspace/db";
+import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable, doctorLeavesTable } from "@workspace/db";
 import {
   CreateDoctorBody,
   UpdateDoctorBody,
@@ -9,6 +9,10 @@ import {
   DeleteDoctorParams,
   GetDoctorAvailabilityParams,
   GetDoctorAvailabilityQueryParams,
+  ListDoctorLeavesParams,
+  AddDoctorLeaveParams,
+  AddDoctorLeaveBody,
+  DeleteDoctorLeaveParams,
 } from "@workspace/api-zod";
 import { sql, and } from "drizzle-orm";
 
@@ -162,6 +166,44 @@ router.get("/doctors/:id/availability", async (req, res): Promise<void> => {
   });
 
   res.json({ doctorId: doctor.id, date, slots: slotData });
+});
+
+router.get("/doctors/:id/leaves", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
+  const params = ListDoctorLeavesParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const leaves = await db.select().from(doctorLeavesTable)
+    .where(and(eq(doctorLeavesTable.doctorId, params.data.id), eq(doctorLeavesTable.clinicId, clinicId)))
+    .orderBy(doctorLeavesTable.leaveDate);
+  res.json(leaves.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })));
+});
+
+router.post("/doctors/:id/leaves", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
+  const params = AddDoctorLeaveParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const parsed = AddDoctorLeaveBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const [doctor] = await db.select().from(doctorsTable)
+    .where(and(eq(doctorsTable.id, params.data.id), eq(doctorsTable.clinicId, clinicId)));
+  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+  const [leave] = await db.insert(doctorLeavesTable)
+    .values({ doctorId: params.data.id, clinicId, leaveDate: parsed.data.leaveDate, reason: parsed.data.reason ?? null })
+    .onConflictDoNothing()
+    .returning();
+  if (!leave) { res.status(409).json({ error: "Leave already exists for this date" }); return; }
+  res.status(201).json({ ...leave, createdAt: leave.createdAt.toISOString() });
+});
+
+router.delete("/doctors/:id/leaves/:leaveId", async (req, res): Promise<void> => {
+  const clinicId = req.clinicId!;
+  const params = DeleteDoctorLeaveParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const [deleted] = await db.delete(doctorLeavesTable)
+    .where(and(eq(doctorLeavesTable.id, params.data.leaveId), eq(doctorLeavesTable.clinicId, clinicId)))
+    .returning();
+  if (!deleted) { res.status(404).json({ error: "Leave not found" }); return; }
+  res.sendStatus(204);
 });
 
 export default router;

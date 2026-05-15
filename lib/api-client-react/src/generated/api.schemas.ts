@@ -56,6 +56,22 @@ export interface UpdateDoctorBody {
   isActive?: boolean | null;
 }
 
+export interface DoctorLeave {
+  id: number;
+  doctorId: number;
+  clinicId: number;
+  leaveDate: string;
+  /** @nullable */
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface CreateDoctorLeaveBody {
+  leaveDate: string;
+  /** @nullable */
+  reason?: string | null;
+}
+
 export interface DoctorEmergency {
   id: number;
   doctorId: number;

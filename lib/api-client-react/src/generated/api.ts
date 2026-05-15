@@ -21,11 +21,13 @@ import type {
   AppointmentReminder,
   CreateAppointmentBody,
   CreateDoctorBody,
+  CreateDoctorLeaveBody,
   CreateReminderBody,
   DashboardSummary,
   Doctor,
   DoctorAvailability,
   DoctorEmergency,
+  DoctorLeave,
   DoctorPortalData,
   GenerateRemindersResponse,
   GetDoctorAvailabilityParams,
@@ -706,6 +708,265 @@ export const useDeleteDoctor = <
   TContext
 > => {
   return useMutation(getDeleteDoctorMutationOptions(options));
+};
+
+/**
+ * @summary List all leave dates for a doctor
+ */
+export const getListDoctorLeavesUrl = (id: number) => {
+  return `/api/doctors/${id}/leaves`;
+};
+
+export const listDoctorLeaves = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DoctorLeave[]> => {
+  return customFetch<DoctorLeave[]>(getListDoctorLeavesUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDoctorLeavesQueryKey = (id: number) => {
+  return [`/api/doctors/${id}/leaves`] as const;
+};
+
+export const getListDoctorLeavesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDoctorLeaves>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listDoctorLeaves>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDoctorLeavesQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listDoctorLeaves>>
+  > = ({ signal }) => listDoctorLeaves(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDoctorLeaves>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDoctorLeavesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDoctorLeaves>>
+>;
+export type ListDoctorLeavesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all leave dates for a doctor
+ */
+
+export function useListDoctorLeaves<
+  TData = Awaited<ReturnType<typeof listDoctorLeaves>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listDoctorLeaves>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDoctorLeavesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a leave date for a doctor
+ */
+export const getAddDoctorLeaveUrl = (id: number) => {
+  return `/api/doctors/${id}/leaves`;
+};
+
+export const addDoctorLeave = async (
+  id: number,
+  createDoctorLeaveBody: CreateDoctorLeaveBody,
+  options?: RequestInit,
+): Promise<DoctorLeave> => {
+  return customFetch<DoctorLeave>(getAddDoctorLeaveUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDoctorLeaveBody),
+  });
+};
+
+export const getAddDoctorLeaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addDoctorLeave>>,
+    TError,
+    { id: number; data: BodyType<CreateDoctorLeaveBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addDoctorLeave>>,
+  TError,
+  { id: number; data: BodyType<CreateDoctorLeaveBody> },
+  TContext
+> => {
+  const mutationKey = ["addDoctorLeave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addDoctorLeave>>,
+    { id: number; data: BodyType<CreateDoctorLeaveBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addDoctorLeave(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddDoctorLeaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addDoctorLeave>>
+>;
+export type AddDoctorLeaveMutationBody = BodyType<CreateDoctorLeaveBody>;
+export type AddDoctorLeaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a leave date for a doctor
+ */
+export const useAddDoctorLeave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addDoctorLeave>>,
+    TError,
+    { id: number; data: BodyType<CreateDoctorLeaveBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addDoctorLeave>>,
+  TError,
+  { id: number; data: BodyType<CreateDoctorLeaveBody> },
+  TContext
+> => {
+  return useMutation(getAddDoctorLeaveMutationOptions(options));
+};
+
+/**
+ * @summary Remove a leave date for a doctor
+ */
+export const getDeleteDoctorLeaveUrl = (id: number, leaveId: number) => {
+  return `/api/doctors/${id}/leaves/${leaveId}`;
+};
+
+export const deleteDoctorLeave = async (
+  id: number,
+  leaveId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteDoctorLeaveUrl(id, leaveId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDoctorLeaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDoctorLeave>>,
+    TError,
+    { id: number; leaveId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDoctorLeave>>,
+  TError,
+  { id: number; leaveId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteDoctorLeave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDoctorLeave>>,
+    { id: number; leaveId: number }
+  > = (props) => {
+    const { id, leaveId } = props ?? {};
+
+    return deleteDoctorLeave(id, leaveId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDoctorLeaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDoctorLeave>>
+>;
+
+export type DeleteDoctorLeaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a leave date for a doctor
+ */
+export const useDeleteDoctorLeave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDoctorLeave>>,
+    TError,
+    { id: number; leaveId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDoctorLeave>>,
+  TError,
+  { id: number; leaveId: number },
+  TContext
+> => {
+  return useMutation(getDeleteDoctorLeaveMutationOptions(options));
 };
 
 /**

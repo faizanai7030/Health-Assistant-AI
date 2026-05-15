@@ -1,5 +1,5 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable } from "@workspace/db";
+import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable, doctorLeavesTable } from "@workspace/db";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { logger } from "./logger";
 
@@ -56,6 +56,10 @@ export async function getAvailabilityContext(clinicId: number, date: string): Pr
   const today = new Date().toISOString().split("T")[0];
   const emergencies = date === today ? await getTodayEmergencies(clinicId) : new Map();
 
+  const leavesOnDate = await db.select().from(doctorLeavesTable)
+    .where(and(eq(doctorLeavesTable.clinicId, clinicId), eq(doctorLeavesTable.leaveDate, date)));
+  const onLeaveSet = new Set(leavesOnDate.map((l) => l.doctorId));
+
   const lines: string[] = [`Availability for ${date}:`];
 
   for (const doc of doctors) {
@@ -69,6 +73,13 @@ export async function getAvailabilityContext(clinicId: number, date: string): Pr
       if (emergency.type === "late") {
         lines.push(`- ${doc.name} (${doc.specialization}): EMERGENCY - Doctor will be late today. Use caution when booking early slots.`);
       }
+    }
+
+    if (onLeaveSet.has(doc.id)) {
+      const leave = leavesOnDate.find((l) => l.doctorId === doc.id);
+      const reason = leave?.reason ? ` (${leave.reason})` : "";
+      lines.push(`- ${doc.name} (${doc.specialization}): On leave${reason}. Do not book.`);
+      continue;
     }
 
     const workingDays = doc.workingDays.split(",").map(Number);

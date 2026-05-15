@@ -198,6 +198,43 @@ export const DeleteDoctorParams = zod.object({
 });
 
 /**
+ * @summary List all leave dates for a doctor
+ */
+export const ListDoctorLeavesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListDoctorLeavesResponseItem = zod.object({
+  id: zod.number(),
+  doctorId: zod.number(),
+  clinicId: zod.number(),
+  leaveDate: zod.string(),
+  reason: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const ListDoctorLeavesResponse = zod.array(ListDoctorLeavesResponseItem);
+
+/**
+ * @summary Add a leave date for a doctor
+ */
+export const AddDoctorLeaveParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AddDoctorLeaveBody = zod.object({
+  leaveDate: zod.string(),
+  reason: zod.string().nullish(),
+});
+
+/**
+ * @summary Remove a leave date for a doctor
+ */
+export const DeleteDoctorLeaveParams = zod.object({
+  id: zod.coerce.number(),
+  leaveId: zod.coerce.number(),
+});
+
+/**
  * @summary Get doctor availability for a specific date
  */
 export const GetDoctorAvailabilityParams = zod.object({

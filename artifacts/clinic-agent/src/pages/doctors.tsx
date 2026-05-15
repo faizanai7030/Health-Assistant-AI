@@ -12,6 +12,10 @@ import {
   getListAppointmentsQueryKey,
   useCreateAppointment,
   useDeleteAppointment,
+  useListDoctorLeaves,
+  getListDoctorLeavesQueryKey,
+  useAddDoctorLeave,
+  useDeleteDoctorLeave,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,7 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, User, Stethoscope, Phone, Clock, Pencil, Trash2, Link2, AlertTriangle, XCircle, CalendarDays } from "lucide-react";
+import { Plus, User, Stethoscope, Phone, Clock, Pencil, Trash2, Link2, AlertTriangle, XCircle, CalendarDays, CalendarOff, X } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +46,43 @@ function generateTimeSlots(start: string, end: string, duration: number): string
   return slots;
 }
 
+const DAYS = [
+  { label: "Sun", value: 0 },
+  { label: "Mon", value: 1 },
+  { label: "Tue", value: 2 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 4 },
+  { label: "Fri", value: 5 },
+  { label: "Sat", value: 6 },
+];
+
+function WorkingDaysField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const selected = new Set(value.split(",").map(Number).filter((n) => !isNaN(n)));
+  const toggle = (day: number) => {
+    const next = new Set(selected);
+    if (next.has(day)) next.delete(day); else next.add(day);
+    onChange([...next].sort((a, b) => a - b).join(","));
+  };
+  return (
+    <div className="flex gap-1.5 flex-wrap">
+      {DAYS.map((d) => (
+        <button
+          key={d.value}
+          type="button"
+          onClick={() => toggle(d.value)}
+          className={`w-10 h-8 rounded text-xs font-medium border transition-colors ${
+            selected.has(d.value)
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-white text-muted-foreground border-border hover:border-primary"
+          }`}
+        >
+          {d.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const doctorSchema = z.object({
   name: z.string().min(1, "Name is required"),
   specialization: z.string().min(1, "Specialization is required"),
@@ -50,7 +91,7 @@ const doctorSchema = z.object({
   workingHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Format HH:MM"),
   workingHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Format HH:MM"),
   slotDurationMinutes: z.coerce.number().min(5).max(120),
-  workingDays: z.string().min(1, "Working days required (e.g. 1,2,3,4,5)")
+  workingDays: z.string().min(1, "Select at least one working day"),
 });
 
 const walkinSchema = z.object({
@@ -252,6 +293,112 @@ function DoctorScheduleDialog({ doctor }: { doctor: { id: number; name: string; 
   );
 }
 
+function DoctorLeavesDialog({ doctor }: { doctor: { id: number; name: string } }) {
+  const [open, setOpen] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newReason, setNewReason] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: leaves, isLoading } = useListDoctorLeaves(
+    doctor.id,
+    { query: { enabled: open, refetchOnWindowFocus: true } }
+  );
+
+  const addLeave = useAddDoctorLeave();
+  const deleteLeave = useDeleteDoctorLeave();
+
+  const handleAdd = () => {
+    if (!newDate) return;
+    addLeave.mutate(
+      { id: doctor.id, data: { leaveDate: newDate, reason: newReason || null } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListDoctorLeavesQueryKey(doctor.id) });
+          toast({ title: "Leave date added" });
+          setNewDate("");
+          setNewReason("");
+        },
+        onError: () => toast({ title: "Date already added", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleDelete = (leaveId: number) => {
+    deleteLeave.mutate(
+      { id: doctor.id, leaveId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListDoctorLeavesQueryKey(doctor.id) });
+          toast({ title: "Leave date removed" });
+        },
+      }
+    );
+  };
+
+  const today = new Date().toISOString().split("T")[0];
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50" title="Manage leave dates">
+          <CalendarOff className="w-4 h-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Leave Dates — {doctor.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Add specific dates when this doctor won't be available (holidays, conferences, etc.). The AI will not book appointments on these dates.</p>
+
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={newDate}
+              min={today}
+              onChange={(e) => setNewDate(e.target.value)}
+              className="flex-1"
+            />
+            <Input
+              placeholder="Reason (optional)"
+              value={newReason}
+              onChange={(e) => setNewReason(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleAdd} disabled={!newDate || addLeave.isPending} size="sm">
+              Add
+            </Button>
+          </div>
+
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {isLoading ? (
+              <div className="text-sm text-muted-foreground text-center py-4">Loading...</div>
+            ) : !leaves?.length ? (
+              <div className="text-sm text-muted-foreground text-center py-4">No leave dates added yet.</div>
+            ) : (
+              leaves.map((leave) => (
+                <div key={leave.id} className="flex items-center justify-between p-2 rounded-lg border bg-orange-50 border-orange-100">
+                  <div>
+                    <span className="text-sm font-medium">{format(parseISO(leave.leaveDate), "EEE, d MMM yyyy")}</span>
+                    {leave.reason && <span className="text-xs text-muted-foreground ml-2">· {leave.reason}</span>}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(leave.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors ml-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Doctors() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -397,7 +544,13 @@ export default function Doctors() {
                     <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="workingDays" render={({ field }) => (
-                    <FormItem><FormLabel>Working Days (0-6)</FormLabel><FormControl><Input {...field} placeholder="1,2,3,4,5" /></FormControl><FormMessage /></FormItem>
+                    <FormItem className="col-span-2">
+                      <FormLabel>Working Days</FormLabel>
+                      <FormControl>
+                        <WorkingDaysField value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="workingHoursStart" render={({ field }) => (
                     <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input {...field} placeholder="09:00" /></FormControl><FormMessage /></FormItem>
@@ -522,8 +675,9 @@ export default function Doctors() {
                       </div>
                     )}
 
-                    <div className="pt-2 flex space-x-2 border-t mt-2">
+                    <div className="pt-2 flex space-x-2 border-t mt-2 flex-wrap gap-y-1">
                       <DoctorScheduleDialog doctor={doctor} />
+                      <DoctorLeavesDialog doctor={doctor} />
                       <Button
                         variant="outline"
                         size="sm"
