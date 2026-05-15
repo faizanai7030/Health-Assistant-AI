@@ -204,10 +204,12 @@ export default function Appointments() {
         <Button variant="outline" size="icon" onClick={nextDay} className="h-9 w-9">
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <span className="text-sm text-muted-foreground">
-          {format(parseISO(selectedDate), "EEEE, d MMMM yyyy")}
-          {" · "}<span className="font-medium">{dateFiltered.length} appointment{dateFiltered.length !== 1 ? "s" : ""}</span>
-        </span>
+        {selectedDate && (
+          <span className="text-sm text-muted-foreground">
+            {format(parseISO(selectedDate), "EEEE, d MMMM yyyy")}
+            {" · "}<span className="font-medium">{dateFiltered.length} appointment{dateFiltered.length !== 1 ? "s" : ""}</span>
+          </span>
+        )}
       </div>
 
       {/* Walk-in Dialog */}
