@@ -11,12 +11,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, CheckCircle, XCircle, User, CalendarDays } from "lucide-react";
 
+const LATE_OPTIONS = [
+  { label: "15 min", minutes: 15 },
+  { label: "30 min", minutes: 30 },
+  { label: "1 hour", minutes: 60 },
+  { label: "2 hours", minutes: 120 },
+];
+
 export default function DoctorPortal() {
   const params = useParams<{ token: string }>();
   const token = params.token ?? "";
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
   const [confirming, setConfirming] = useState<"late" | "absent" | null>(null);
+  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
 
   const { data, isLoading, isError } = useGetDoctorPortal(
     token,
@@ -26,18 +35,41 @@ export default function DoctorPortal() {
   const setEmergency = useSetDoctorEmergencyViaPortal();
   const clearEmergency = useClearDoctorEmergencyViaPortal();
 
-  const handleEmergency = (type: "late" | "absent") => {
-    if (confirming !== type) {
-      setConfirming(type);
+  const handleLateButtonTap = () => {
+    if (confirming !== "late") {
+      setConfirming("late");
+      setSelectedMinutes(null);
+      return;
+    }
+    if (!selectedMinutes) return;
+    setConfirming(null);
+    setSelectedMinutes(null);
+    setEmergency.mutate({ token, data: { type: "late", lateByMinutes: selectedMinutes } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetDoctorPortalQueryKey(token) });
+        const label = LATE_OPTIONS.find((o) => o.minutes === selectedMinutes)?.label ?? "";
+        toast({
+          title: `Marked as running ${label} late`,
+          description: "Patients have been notified automatically.",
+        });
+      },
+      onError: () => toast({ title: "Something went wrong", variant: "destructive" }),
+    });
+  };
+
+  const handleAbsent = () => {
+    if (confirming !== "absent") {
+      setConfirming("absent");
+      setSelectedMinutes(null);
       return;
     }
     setConfirming(null);
-    setEmergency.mutate({ token, data: { type } }, {
+    setEmergency.mutate({ token, data: { type: "absent" } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetDoctorPortalQueryKey(token) });
         toast({
-          title: type === "absent" ? "Marked as not coming today" : "Marked as running late",
-          description: "Patients will not be booked for you today. Clinic staff has been notified.",
+          title: "Marked as not coming today",
+          description: "Patients have been notified automatically.",
         });
       },
       onError: () => toast({ title: "Something went wrong", variant: "destructive" }),
@@ -46,6 +78,7 @@ export default function DoctorPortal() {
 
   const handleClear = () => {
     setConfirming(null);
+    setSelectedMinutes(null);
     clearEmergency.mutate({ token }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetDoctorPortalQueryKey(token) });
@@ -81,6 +114,12 @@ export default function DoctorPortal() {
   const today = new Date();
   const todayLabel = today.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
+  const lateDelayLabel = emergencyToday?.lateByMinutes === 15 ? "15 minutes"
+    : emergencyToday?.lateByMinutes === 30 ? "30 minutes"
+    : emergencyToday?.lateByMinutes === 60 ? "1 hour"
+    : emergencyToday?.lateByMinutes === 120 ? "2 hours"
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="max-w-md mx-auto px-4 pb-12 pt-6">
@@ -112,8 +151,11 @@ export default function DoctorPortal() {
                 <p className={`font-bold ${emergencyToday.type === "absent" ? "text-red-700" : "text-amber-700"}`}>
                   {emergencyToday.type === "absent" ? "Marked: Not Coming Today" : "Marked: Running Late Today"}
                 </p>
+                {emergencyToday.type === "late" && lateDelayLabel && (
+                  <p className="text-sm text-amber-600 font-semibold">Delay: ~{lateDelayLabel}</p>
+                )}
                 <p className={`text-sm ${emergencyToday.type === "absent" ? "text-red-600" : "text-amber-600"}`}>
-                  Patients are not being booked for you today.
+                  All patients have been notified via WhatsApp.
                 </p>
               </div>
             </div>
@@ -128,20 +170,46 @@ export default function DoctorPortal() {
           <div className="space-y-3 mb-6">
             <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Emergency Controls</p>
 
-            <button
-              onClick={() => handleEmergency("late")}
-              className={`w-full py-4 rounded-2xl border-2 font-bold text-lg transition-all active:scale-95 ${
-                confirming === "late"
-                  ? "bg-amber-500 text-white border-amber-500 shadow-lg"
-                  : "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100"
-              }`}
-              disabled={setEmergency.isPending}
-            >
-              {confirming === "late" ? "⚠️ Tap again to confirm — Running Late" : "⏱ I Will Be Late Today"}
-            </button>
+            {confirming === "late" ? (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 space-y-3">
+                <p className="text-amber-800 font-bold text-center">⏱ How late will you be?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {LATE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.minutes}
+                      onClick={() => setSelectedMinutes(opt.minutes)}
+                      className={`py-3 rounded-xl border-2 font-bold text-base transition-all active:scale-95 ${
+                        selectedMinutes === opt.minutes
+                          ? "bg-amber-500 text-white border-amber-500 shadow-lg"
+                          : "bg-white text-amber-700 border-amber-300 hover:bg-amber-100"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {selectedMinutes && (
+                  <button
+                    onClick={handleLateButtonTap}
+                    disabled={setEmergency.isPending}
+                    className="w-full py-3 rounded-xl bg-amber-500 text-white font-bold text-base shadow-lg active:scale-95 transition-all"
+                  >
+                    ⚠️ Confirm — I'll be {LATE_OPTIONS.find((o) => o.minutes === selectedMinutes)?.label} late
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={handleLateButtonTap}
+                className="w-full py-4 rounded-2xl border-2 font-bold text-lg transition-all active:scale-95 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100"
+                disabled={setEmergency.isPending}
+              >
+                ⏱ I Will Be Late Today
+              </button>
+            )}
 
             <button
-              onClick={() => handleEmergency("absent")}
+              onClick={handleAbsent}
               className={`w-full py-4 rounded-2xl border-2 font-bold text-lg transition-all active:scale-95 ${
                 confirming === "absent"
                   ? "bg-red-600 text-white border-red-600 shadow-lg"
@@ -154,7 +222,7 @@ export default function DoctorPortal() {
 
             {confirming && (
               <button
-                onClick={() => setConfirming(null)}
+                onClick={() => { setConfirming(null); setSelectedMinutes(null); }}
                 className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
               >
                 Cancel

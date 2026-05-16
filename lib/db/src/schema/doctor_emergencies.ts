@@ -9,6 +9,7 @@ export const doctorEmergenciesTable = pgTable("doctor_emergencies", {
   date: text("date").notNull(),
   type: text("type").notNull(),
   message: text("message"),
+  lateByMinutes: integer("late_by_minutes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -89,6 +89,8 @@ export interface SetEmergencyBody {
   type: string;
   /** @nullable */
   message?: string | null;
+  /** Minutes late (only for type=late): 15, 30, 60, 120 */
+  lateByMinutes?: number | null;
 }
 
 export interface Appointment {
