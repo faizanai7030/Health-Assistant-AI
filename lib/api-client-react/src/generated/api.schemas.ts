@@ -81,6 +81,8 @@ export interface DoctorEmergency {
   type: string;
   /** @nullable */
   message?: string | null;
+  /** Minutes late — only present when type=late */
+  lateByMinutes?: number | null;
   createdAt: string;
 }
 

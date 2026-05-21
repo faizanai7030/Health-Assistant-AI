@@ -1,15 +1,16 @@
 import { Router, type IRouter } from "express";
 import { eq, and, sql } from "drizzle-orm";
 import { db, appointmentsTable, doctorsTable, whatsappConversationsTable, whatsappMessagesTable } from "@workspace/db";
+import { todayIST, dateIST } from "../lib/date";
 
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const clinicId = req.clinicId!;
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayIST();
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const weekStartStr = weekStart.toISOString().split("T")[0];
+  const weekStartStr = dateIST(weekStart);
 
   const [doctorCount] = await db.select({ count: sql<number>`count(*)::int` }).from(doctorsTable)
     .where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true)));
@@ -44,7 +45,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 
 router.get("/dashboard/today", async (req, res): Promise<void> => {
   const clinicId = req.clinicId!;
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayIST();
   const rows = await db
     .select()
     .from(appointmentsTable)

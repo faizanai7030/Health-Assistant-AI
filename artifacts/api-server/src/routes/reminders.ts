@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, appointmentRemindersTable, appointmentsTable, doctorsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { todayIST } from "../lib/date";
 
 const router = Router();
 
@@ -81,7 +82,7 @@ router.patch("/reminders/:id", async (req, res) => {
 
 router.post("/reminders/generate-today", async (req, res) => {
   const clinicId = req.clinicId!;
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayIST();
 
   const todayAppts = await db
     .select({

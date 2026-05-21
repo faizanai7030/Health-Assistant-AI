@@ -2,6 +2,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable, doctorLeavesTable } from "@workspace/db";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { logger } from "./logger";
+import { todayIST, nextDaysIST } from "./date";
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 4, delayMs = 500): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -35,7 +36,7 @@ function generateTimeSlots(start: string, end: string, durationMinutes: number):
 }
 
 async function getTodayEmergencies(clinicId: number): Promise<Map<number, { type: string; message: string | null }>> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayIST();
   const rows = await db
     .select()
     .from(doctorEmergenciesTable)
@@ -51,9 +52,9 @@ async function getTodayEmergencies(clinicId: number): Promise<Map<number, { type
 export async function getAvailabilityContext(clinicId: number, date: string): Promise<string> {
   const doctors = await db.select().from(doctorsTable)
     .where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true)));
-  const dateObj = new Date(date);
+  const dateObj = new Date(date + "T00:00:00+05:30");
   const dayOfWeek = dateObj.getDay();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayIST();
   const emergencies = date === today ? await getTodayEmergencies(clinicId) : new Map();
 
   const leavesOnDate = await db.select().from(doctorLeavesTable)
@@ -117,7 +118,7 @@ export async function getAvailabilityContext(clinicId: number, date: string): Pr
 }
 
 async function getPatientUpcomingAppointments(clinicId: number, patientPhone: string) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayIST();
   const rows = await db
     .select({
       id: appointmentsTable.id,
@@ -154,11 +155,8 @@ export async function processWhatsAppMessage(
   userMessage: string,
   conversationHistory: ConversationMessage[]
 ): Promise<{ reply: string; appointmentBooked: boolean; patientName: string | null; appointmentCancelled: boolean }> {
-  const today = new Date().toISOString().split("T")[0];
-  const nextDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(Date.now() + i * 86400000);
-    return d.toISOString().split("T")[0];
-  });
+  const today = todayIST();
+  const nextDays = nextDaysIST(7);
 
   const [availabilities, doctors, patientAppointments] = await Promise.all([
     Promise.all(nextDays.map((d) => getAvailabilityContext(clinicId, d))),

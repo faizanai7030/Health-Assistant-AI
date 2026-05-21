@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db, doctorsTable, doctorEmergenciesTable, clinicsTable, appointmentsTable, whatsappConversationsTable, whatsappMessagesTable } from "@workspace/db";
 import { eq, and, ne } from "drizzle-orm";
+import { todayIST } from "../lib/date";
 
 const router = Router();
 
-const todayStr = () => new Date().toISOString().split("T")[0];
+const todayStr = () => todayIST();
 
 async function notifyPatientsOfEmergency(
   clinicId: number,
