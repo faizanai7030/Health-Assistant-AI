@@ -632,7 +632,7 @@ export default function Doctors() {
                     }`}>
                       <span className="flex items-center gap-1.5">
                         <AlertTriangle className="h-4 w-4" />
-                        {emergency.type === "absent" ? "Not coming today" : "Running late today"}
+                        {emergency.type === "absent" ? "Not coming today" : `Running late today${emergency.lateByMinutes === 15 ? " — 15 min" : emergency.lateByMinutes === 30 ? " — 30 min" : emergency.lateByMinutes === 60 ? " — 1 hour" : emergency.lateByMinutes === 120 ? " — 2 hours" : ""}`}
                       </span>
                       <button
                         onClick={() => handleClearEmergency(doctor.id)}
