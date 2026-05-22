@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Clock, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Plus, Trash2, ChevronLeft, ChevronRight, Search, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { z } from "zod";
@@ -55,6 +55,7 @@ export default function Appointments() {
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [showWalkin, setShowWalkin] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [patientSearch, setPatientSearch] = useState<string>("");
 
   const { data: appointments, isLoading } = useListAppointments(
     undefined,
@@ -148,6 +149,15 @@ export default function Appointments() {
 
   const isToday = selectedDate === todayStr;
 
+  const searchQuery = patientSearch.trim().toLowerCase();
+  const isSearching = searchQuery.length >= 2;
+
+  const patientHistory = isSearching
+    ? (appointments ?? [])
+        .filter((a) => a.patientName.toLowerCase().includes(searchQuery))
+        .sort((a, b) => b.appointmentDate.localeCompare(a.appointmentDate) || a.timeSlot.localeCompare(b.timeSlot))
+    : [];
+
   const dateFiltered = appointments?.filter((a) => a.appointmentDate === selectedDate) ?? [];
 
   const filtered = (selectedDoctor === "all"
@@ -181,8 +191,93 @@ export default function Appointments() {
         </Button>
       </div>
 
-      {/* Date navigation */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Patient history search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search patient by name to see their full visit history..."
+          value={patientSearch}
+          onChange={(e) => setPatientSearch(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {patientSearch && (
+          <button
+            onClick={() => setPatientSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Patient history results */}
+      {isSearching && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              Patient History — "{patientSearch.trim()}"
+              <span className="text-sm font-normal text-muted-foreground ml-1">({patientHistory.length} visit{patientHistory.length !== 1 ? "s" : ""})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {patientHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <User className="mx-auto h-10 w-10 opacity-20 mb-3" />
+                <p>No appointments found for "{patientSearch.trim()}"</p>
+              </div>
+            ) : (
+              <div className="relative w-full overflow-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="[&_tr]:border-b">
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Patient</th>
+                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Date & Time</th>
+                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Doctor</th>
+                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:last-child]:border-0">
+                    {patientHistory.map((apt) => (
+                      <tr key={apt.id} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-4 align-middle">
+                          <div className="font-medium">{apt.patientName}</div>
+                          <div className="text-xs text-muted-foreground">{apt.patientPhone}</div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          <div className="font-medium">{format(parseISO(apt.appointmentDate), "d MMM yyyy")}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <Clock className="h-3 w-3" />{apt.timeSlot}
+                          </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+                              {apt.doctorName.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-medium">{apt.doctorName}</div>
+                              <div className="text-[10px] text-muted-foreground">{apt.doctorSpecialization}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          <Badge variant="outline" className={getStatusColor(apt.status)}>
+                            {apt.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Date navigation — hidden while searching */}
+      {!isSearching && <div className="flex items-center gap-3 flex-wrap">
         <Button variant="outline" size="icon" onClick={prevDay} className="h-9 w-9">
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -210,7 +305,7 @@ export default function Appointments() {
             {" · "}<span className="font-medium">{dateFiltered.length} appointment{dateFiltered.length !== 1 ? "s" : ""}</span>
           </span>
         )}
-      </div>
+      </div>}
 
       {/* Walk-in Dialog */}
       <Dialog open={showWalkin} onOpenChange={(o) => { setShowWalkin(o); if (!o) form.reset(); }}>
@@ -296,7 +391,7 @@ export default function Appointments() {
       </Dialog>
 
       {/* Doctor filter tabs */}
-      {!isLoading && doctorFilters.length > 0 && (
+      {!isSearching && !isLoading && doctorFilters.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedDoctor("all")}
@@ -330,7 +425,7 @@ export default function Appointments() {
         </div>
       )}
 
-      <Card>
+      {!isSearching && <Card>
         <CardHeader>
           <CardTitle>
             {selectedDoctor === "all" ? "All Appointments" : `${selectedDoctor}'s Appointments`}
@@ -444,7 +539,7 @@ export default function Appointments() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }

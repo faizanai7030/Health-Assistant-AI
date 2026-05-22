@@ -71,6 +71,10 @@ export async function getAvailabilityContext(clinicId: number, date: string): Pr
         lines.push(`- ${doc.name} (${doc.specialization}): EMERGENCY - Doctor is NOT coming today. Do not book.`);
         continue;
       }
+      if (emergency.type === "paused") {
+        lines.push(`- ${doc.name} (${doc.specialization}): AI BOOKINGS PAUSED by doctor for today. Do NOT accept any new booking requests for this doctor today. If patient asks, say the doctor is not taking new appointments today and suggest coming in person or trying tomorrow.`);
+        continue;
+      }
       if (emergency.type === "late") {
         lines.push(`- ${doc.name} (${doc.specialization}): EMERGENCY - Doctor will be late today. Use caution when booking early slots.`);
       }

@@ -9,7 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckCircle, XCircle, User, CalendarDays } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, User, CalendarDays, PauseCircle } from "lucide-react";
 
 const LATE_OPTIONS = [
   { label: "15 min", minutes: 15 },
@@ -18,13 +18,15 @@ const LATE_OPTIONS = [
   { label: "2 hours", minutes: 120 },
 ];
 
+type ConfirmingType = "late" | "absent" | "paused" | null;
+
 export default function DoctorPortal() {
   const params = useParams<{ token: string }>();
   const token = params.token ?? "";
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [confirming, setConfirming] = useState<"late" | "absent" | null>(null);
+  const [confirming, setConfirming] = useState<ConfirmingType>(null);
   const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
 
   const { data, isLoading, isError } = useGetDoctorPortal(
@@ -76,6 +78,25 @@ export default function DoctorPortal() {
     });
   };
 
+  const handlePause = () => {
+    if (confirming !== "paused") {
+      setConfirming("paused");
+      setSelectedMinutes(null);
+      return;
+    }
+    setConfirming(null);
+    setEmergency.mutate({ token, data: { type: "paused" } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetDoctorPortalQueryKey(token) });
+        toast({
+          title: "AI bookings paused for today",
+          description: "Priya will not accept new appointment requests for you today.",
+        });
+      },
+      onError: () => toast({ title: "Something went wrong", variant: "destructive" }),
+    });
+  };
+
   const handleClear = () => {
     setConfirming(null);
     setSelectedMinutes(null);
@@ -120,6 +141,36 @@ export default function DoctorPortal() {
     : emergencyToday?.lateByMinutes === 120 ? "2 hours"
     : null;
 
+  const emergencyBg =
+    emergencyToday?.type === "absent" ? "bg-red-50 border-red-200" :
+    emergencyToday?.type === "paused" ? "bg-indigo-50 border-indigo-200" :
+    "bg-amber-50 border-amber-200";
+
+  const emergencyIcon =
+    emergencyToday?.type === "absent" ? "text-red-500" :
+    emergencyToday?.type === "paused" ? "text-indigo-500" :
+    "text-amber-500";
+
+  const emergencyTextColor =
+    emergencyToday?.type === "absent" ? "text-red-700" :
+    emergencyToday?.type === "paused" ? "text-indigo-700" :
+    "text-amber-700";
+
+  const emergencySubColor =
+    emergencyToday?.type === "absent" ? "text-red-600" :
+    emergencyToday?.type === "paused" ? "text-indigo-600" :
+    "text-amber-600";
+
+  const emergencyTitle =
+    emergencyToday?.type === "absent" ? "Marked: Not Coming Today" :
+    emergencyToday?.type === "paused" ? "AI Bookings Paused Today" :
+    "Marked: Running Late Today";
+
+  const emergencyDesc =
+    emergencyToday?.type === "absent" ? "All patients have been notified via WhatsApp." :
+    emergencyToday?.type === "paused" ? "Priya will not accept new appointment requests for you today." :
+    "All patients have been notified via WhatsApp.";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="max-w-md mx-auto px-4 pb-12 pt-6">
@@ -138,38 +189,29 @@ export default function DoctorPortal() {
         </div>
 
         {emergencyToday ? (
-          <div className={`rounded-2xl p-5 mb-5 border-2 ${
-            emergencyToday.type === "absent"
-              ? "bg-red-50 border-red-200"
-              : "bg-amber-50 border-amber-200"
-          }`}>
+          <div className={`rounded-2xl p-5 mb-5 border-2 ${emergencyBg}`}>
             <div className="flex items-center gap-3 mb-3">
-              <AlertTriangle className={`h-6 w-6 ${
-                emergencyToday.type === "absent" ? "text-red-500" : "text-amber-500"
-              }`} />
+              <AlertTriangle className={`h-6 w-6 ${emergencyIcon}`} />
               <div>
-                <p className={`font-bold ${emergencyToday.type === "absent" ? "text-red-700" : "text-amber-700"}`}>
-                  {emergencyToday.type === "absent" ? "Marked: Not Coming Today" : "Marked: Running Late Today"}
-                </p>
+                <p className={`font-bold ${emergencyTextColor}`}>{emergencyTitle}</p>
                 {emergencyToday.type === "late" && lateDelayLabel && (
                   <p className="text-sm text-amber-600 font-semibold">Delay: ~{lateDelayLabel}</p>
                 )}
-                <p className={`text-sm ${emergencyToday.type === "absent" ? "text-red-600" : "text-amber-600"}`}>
-                  All patients have been notified via WhatsApp.
-                </p>
+                <p className={`text-sm ${emergencySubColor}`}>{emergencyDesc}</p>
               </div>
             </div>
             <button
               onClick={handleClear}
               className="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
-              ✓ I'm available now — Clear Status
+              ✓ Clear Status — I'm Available Now
             </button>
           </div>
         ) : (
           <div className="space-y-3 mb-6">
-            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Emergency Controls</p>
+            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Controls</p>
 
+            {/* LATE button with time picker */}
             {confirming === "late" ? (
               <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 space-y-3">
                 <p className="text-amber-800 font-bold text-center">⏱ How late will you be?</p>
@@ -208,6 +250,7 @@ export default function DoctorPortal() {
               </button>
             )}
 
+            {/* ABSENT button */}
             <button
               onClick={handleAbsent}
               className={`w-full py-4 rounded-2xl border-2 font-bold text-lg transition-all active:scale-95 ${
@@ -218,6 +261,22 @@ export default function DoctorPortal() {
               disabled={setEmergency.isPending}
             >
               {confirming === "absent" ? "🚨 Tap again to confirm — Not Coming" : "🚫 I Cannot Come Today"}
+            </button>
+
+            {/* PAUSE AI BOOKINGS button */}
+            <button
+              onClick={handlePause}
+              className={`w-full py-4 rounded-2xl border-2 font-bold text-lg transition-all active:scale-95 ${
+                confirming === "paused"
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-lg"
+                  : "bg-indigo-50 text-indigo-700 border-indigo-300 hover:bg-indigo-100"
+              }`}
+              disabled={setEmergency.isPending}
+            >
+              {confirming === "paused"
+                ? "⏸ Tap again to confirm — Pause Bookings"
+                : <span className="flex items-center justify-center gap-2"><PauseCircle className="h-5 w-5" /> Pause AI Bookings Today</span>
+              }
             </button>
 
             {confirming && (
@@ -231,6 +290,7 @@ export default function DoctorPortal() {
           </div>
         )}
 
+        {/* TODAY'S APPOINTMENTS */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <CalendarDays className="h-4 w-4 text-gray-500" />
