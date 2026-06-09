@@ -9,7 +9,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Mail, Lock, CheckCircle2, MessageSquare, Copy, Check, ExternalLink, Wifi, WifiOff } from "lucide-react";
+import { Mail, Lock, CheckCircle2, MessageSquare, Copy, Check, ExternalLink, Wifi, WifiOff, MapPin } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -31,9 +32,18 @@ const whatsappSchema = z.object({
   whatsappNumber: z.string().min(1, "Enter the WhatsApp number"),
 });
 
+const clinicInfoSchema = z.object({
+  address: z.string().optional(),
+  timings: z.string().optional(),
+  fees: z.string().optional(),
+  parking: z.string().optional(),
+  other: z.string().optional(),
+});
+
 type EmailForm = z.infer<typeof emailSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 type WhatsappForm = z.infer<typeof whatsappSchema>;
+type ClinicInfoForm = z.infer<typeof clinicInfoSchema>;
 
 interface WhatsappSettings {
   whatsappNumber: string | null;
@@ -48,6 +58,8 @@ export default function Settings() {
   const [whatsappSettings, setWhatsappSettings] = useState<WhatsappSettings | null>(null);
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [whatsappSaving, setWhatsappSaving] = useState(false);
+  const [clinicInfoSaved, setClinicInfoSaved] = useState(false);
+  const [clinicInfoSaving, setClinicInfoSaving] = useState(false);
 
   const emailForm = useForm<EmailForm>({
     resolver: zodResolver(emailSchema),
@@ -64,6 +76,11 @@ export default function Settings() {
     defaultValues: { whatsappNumber: "" },
   });
 
+  const clinicInfoForm = useForm<ClinicInfoForm>({
+    resolver: zodResolver(clinicInfoSchema),
+    defaultValues: { address: "", timings: "", fees: "", parking: "", other: "" },
+  });
+
   useEffect(() => {
     fetch(`${API_BASE}/settings/whatsapp`, { credentials: "include" })
       .then((r) => r.json())
@@ -72,7 +89,43 @@ export default function Settings() {
         whatsappForm.setValue("whatsappNumber", data.whatsappNumber ?? "");
       })
       .catch(() => {});
+
+    fetch(`${API_BASE}/settings/clinic-info`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { clinicFaq: ClinicInfoForm | null }) => {
+        if (data.clinicFaq) {
+          clinicInfoForm.reset({
+            address: data.clinicFaq.address ?? "",
+            timings: data.clinicFaq.timings ?? "",
+            fees: data.clinicFaq.fees ?? "",
+            parking: data.clinicFaq.parking ?? "",
+            other: data.clinicFaq.other ?? "",
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  async function onClinicInfoSubmit(values: ClinicInfoForm) {
+    setClinicInfoSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/settings/clinic-info`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(values),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Update failed");
+      setClinicInfoSaved(true);
+      setTimeout(() => setClinicInfoSaved(false), 3000);
+      toast({ title: "Clinic info saved", description: "Priya will now answer patient questions using this info." });
+    } catch (err: unknown) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Something went wrong", variant: "destructive" });
+    } finally {
+      setClinicInfoSaving(false);
+    }
+  }
 
   async function onEmailSubmit(values: EmailForm) {
     try {
@@ -219,6 +272,101 @@ export default function Settings() {
               Open Twilio Console <ExternalLink className="w-3 h-3" />
             </a>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Clinic Info Section */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-primary" />
+            <CardTitle className="text-base">Clinic Information for Priya</CardTitle>
+          </div>
+          <CardDescription>
+            Fill in your clinic details. Priya will use this to answer patient questions like "What are your timings?", "How much are the fees?", "Where are you located?" — without needing to call the clinic.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...clinicInfoForm}>
+            <form onSubmit={clinicInfoForm.handleSubmit(onClinicInfoSubmit)} className="space-y-4">
+              <FormField
+                control={clinicInfoForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Clinic Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main Road, Sector 5, Delhi — near Metro Station" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={clinicInfoForm.control}
+                name="timings"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Clinic Timings</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Mon–Sat: 9am–7pm, Sunday: Closed" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={clinicInfoForm.control}
+                name="fees"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Consultation Fees</FormLabel>
+                    <FormControl>
+                      <Input placeholder="₹300 for General Physician, ₹500 for Specialist" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={clinicInfoForm.control}
+                name="parking"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parking</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Free parking available in basement" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={clinicInfoForm.control}
+                name="other"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Other Info (optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="e.g. Lab reports available same day. Cash and UPI accepted. Bring Aadhaar card for first visit."
+                        className="resize-none"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>Any other info patients commonly ask about.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={clinicInfoSaving} className="w-full">
+                {clinicInfoSaved ? (
+                  <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Saved</span>
+                ) : clinicInfoSaving ? "Saving..." : "Save Clinic Info"}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 

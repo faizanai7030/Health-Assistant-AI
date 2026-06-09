@@ -108,6 +108,23 @@ router.get("/settings/whatsapp", requireAuth, async (req, res): Promise<void> =>
   });
 });
 
+router.get("/settings/clinic-info", requireAuth, async (req, res): Promise<void> => {
+  const [clinic] = await db
+    .select({ clinicFaq: clinicsTable.clinicFaq })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, req.clinicId!));
+  res.json({ clinicFaq: clinic?.clinicFaq ?? null });
+});
+
+router.patch("/settings/clinic-info", requireAuth, async (req, res): Promise<void> => {
+  const { address, timings, fees, parking, other } = req.body as {
+    address?: string; timings?: string; fees?: string; parking?: string; other?: string;
+  };
+  const clinicFaq = { address: address ?? "", timings: timings ?? "", fees: fees ?? "", parking: parking ?? "", other: other ?? "" };
+  await db.update(clinicsTable).set({ clinicFaq }).where(eq(clinicsTable.id, req.clinicId!));
+  res.json({ ok: true, clinicFaq });
+});
+
 router.patch("/settings/whatsapp", requireAuth, async (req, res): Promise<void> => {
   const { whatsappNumber } = req.body as { whatsappNumber?: string };
 

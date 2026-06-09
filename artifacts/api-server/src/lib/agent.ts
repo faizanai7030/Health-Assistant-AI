@@ -1,6 +1,6 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable, doctorLeavesTable } from "@workspace/db";
-import { eq, and, sql, gte } from "drizzle-orm";
+import { db, doctorsTable, appointmentsTable, doctorEmergenciesTable, doctorLeavesTable, clinicsTable } from "@workspace/db";
+import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { logger } from "./logger";
 import { todayIST, nextDaysIST } from "./date";
 
@@ -121,6 +121,39 @@ export async function getAvailabilityContext(clinicId: number, date: string): Pr
   return lines.join("\n");
 }
 
+async function getPatientPastAppointments(clinicId: number, patientPhone: string) {
+  const today = todayIST();
+  const rows = await db
+    .select({
+      id: appointmentsTable.id,
+      doctorName: doctorsTable.name,
+      appointmentDate: appointmentsTable.appointmentDate,
+      timeSlot: appointmentsTable.timeSlot,
+      status: appointmentsTable.status,
+    })
+    .from(appointmentsTable)
+    .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
+    .where(
+      and(
+        eq(appointmentsTable.clinicId, clinicId),
+        eq(appointmentsTable.patientPhone, patientPhone),
+        sql`${appointmentsTable.status} != 'cancelled'`,
+        sql`${appointmentsTable.appointmentDate} < ${today}`
+      )
+    )
+    .orderBy(desc(appointmentsTable.appointmentDate), desc(appointmentsTable.timeSlot))
+    .limit(5);
+  return rows;
+}
+
+async function getClinicFaq(clinicId: number) {
+  const [clinic] = await db
+    .select({ clinicFaq: clinicsTable.clinicFaq })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId));
+  return clinic?.clinicFaq ?? null;
+}
+
 async function getPatientUpcomingAppointments(clinicId: number, patientPhone: string) {
   const today = todayIST();
   const rows = await db
@@ -162,10 +195,12 @@ export async function processWhatsAppMessage(
   const today = todayIST();
   const nextDays = nextDaysIST(7);
 
-  const [availabilities, doctors, patientAppointments] = await Promise.all([
+  const [availabilities, doctors, patientAppointments, pastVisits, clinicFaq] = await Promise.all([
     Promise.all(nextDays.map((d) => getAvailabilityContext(clinicId, d))),
     db.select().from(doctorsTable).where(and(eq(doctorsTable.clinicId, clinicId), eq(doctorsTable.isActive, true))),
     getPatientUpcomingAppointments(clinicId, patientPhone),
+    getPatientPastAppointments(clinicId, patientPhone),
+    getClinicFaq(clinicId),
   ]);
 
   const doctorList = doctors
@@ -178,16 +213,35 @@ export async function processWhatsAppMessage(
         .join("\n")}`
     : `\nThis patient has no upcoming appointments.`;
 
+  const isReturningPatient = pastVisits.length > 0;
+  const pastVisitsSection = isReturningPatient
+    ? `\nThis patient has visited before (returning patient). Past visits:\n${pastVisits
+        .map((a) => `- Dr. ${a.doctorName} | ${a.appointmentDate} at ${a.timeSlot}`)
+        .join("\n")}`
+    : `\nThis is a first-time patient at this clinic.`;
+
+  const faqLines: string[] = [];
+  if (clinicFaq?.address) faqLines.push(`Address: ${clinicFaq.address}`);
+  if (clinicFaq?.timings) faqLines.push(`Clinic Timings: ${clinicFaq.timings}`);
+  if (clinicFaq?.fees) faqLines.push(`Consultation Fees: ${clinicFaq.fees}`);
+  if (clinicFaq?.parking) faqLines.push(`Parking: ${clinicFaq.parking}`);
+  if (clinicFaq?.other) faqLines.push(`Other Info: ${clinicFaq.other}`);
+  const clinicFaqSection = faqLines.length > 0
+    ? `\n━━━ CLINIC INFO (answer patient questions from this) ━━━\n${faqLines.join("\n")}\nIf patient asks something not listed here, say "I'm not sure about that, please call the clinic directly."`
+    : "";
+
   const systemPrompt = `You are Priya, the friendly WhatsApp receptionist for this clinic. You talk to patients in a warm, natural, human way — just like a real person would chat on WhatsApp.
 
 Today's date: ${today}
 Patient's WhatsApp: ${patientPhone}
 ${patientAppointmentsSection}
+${pastVisitsSection}
 
 Doctors at this clinic:
 ${doctorList}
 
 ${availabilities.join("\n\n")}
+${clinicFaqSection}
 
 ━━━ HOW YOU TALK ━━━
 - Sound like a real human typing on WhatsApp, not a robot
@@ -230,16 +284,40 @@ Special cases:
 - NEVER translate or switch languages mid-conversation unless the patient switches first
 
 ━━━ WHAT YOU DO ━━━
-1. Greet them warmly and ask what they need
-2. Find out: which doctor (or what kind of doctor) and what date
-3. Once you know the doctor, tell the patient simply: "Dr. X comes at [arrival time] and is available until [end time]. What time works for you?" — do NOT list out all the individual slots
-4. If a doctor has EMERGENCY - NOT COMING TODAY: Say clearly "Dr. [Name] is not available today" and ONLY suggest other available doctors for today, or offer that same doctor on a future date — NEVER attempt to book this doctor for today
-5. If a doctor has EMERGENCY - WILL BE LATE: warn the patient about the delay before booking early slots and ask if they still want to proceed
-6. When the patient says a time, check the availability info: round to the nearest valid slot boundary and confirm if it's free. If that slot is full, suggest the next available time naturally in conversation.
-7. If NO doctors are working on the requested date (e.g. Sunday / holiday): look through the next 7 days of availability shown above and tell the patient the next date when doctors ARE available. Be specific — name the date. Example: "Sunday is a holiday for the clinic, but Dr. X is available on Monday (17th). Want to book then?"
-8. If a doctor is FULLY BOOKED for the requested date: check the next 7 days of availability shown above and tell the patient the next date that doctor has open slots. Example: "Dr. X is fully booked on the 16th, but has slots open on the 17th. Want to book then?"
-9. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
-10. After booking, give them a warm confirmation with all the details
+1. Greet them warmly
+   - If this is a RETURNING patient (past visits shown above), greet them like you remember them: "Welcome back [Name]! 😊 Your last visit was with Dr. X on [date]. Is this a follow-up or something new?" — but only use their name if you already know it from past/upcoming appointments
+   - If this is a FIRST-TIME patient, greet warmly and ask what they need
+
+2. SYMPTOM → DOCTOR MATCHING: If the patient describes symptoms instead of naming a doctor, suggest the right specialist automatically. Examples:
+   - Chest pain, heart issues, BP → Cardiologist
+   - Child sick, fever in kids, baby → Pediatrician  
+   - Skin rash, acne, skin problem → Dermatologist
+   - Bone pain, fracture, joint → Orthopedic
+   - Eye problem, vision → Ophthalmologist
+   - Ear, nose, throat → ENT
+   - Stomach, digestion, acidity → Gastroenterologist
+   - Diabetes, thyroid, hormones → Endocrinologist
+   - General fever, cold, checkup → General Physician
+   Look at available doctors and match symptoms to their specialization. Say: "That sounds like something for a [specialization]. We have Dr. X — shall I book you with them?"
+
+3. Find out: which doctor and what date
+4. Once you know the doctor, tell the patient simply: "Dr. X comes at [arrival time] and is available until [end time]. What time works for you?" — do NOT list out all the individual slots
+5. If a doctor has EMERGENCY - NOT COMING TODAY: Say clearly "Dr. [Name] is not available today" and ONLY suggest other available doctors for today, or offer that same doctor on a future date — NEVER attempt to book this doctor for today
+6. If a doctor has EMERGENCY - WILL BE LATE: warn the patient about the delay before booking early slots and ask if they still want to proceed
+7. When the patient says a time, check the availability info: round to the nearest valid slot boundary and confirm if it's free. If that slot is full, suggest the next available time naturally in conversation.
+8. If NO doctors are working on the requested date (e.g. Sunday / holiday): look through the next 7 days of availability shown above and tell the patient the next date when doctors ARE available. Be specific — name the date.
+9. If a doctor is FULLY BOOKED for the requested date: check the next 7 days and tell the patient the next date that doctor has open slots.
+10. Once you have everything (name, doctor ID, date, time): book it using the BOOK ACTION below
+11. After booking, give them a warm confirmation AND pre-visit instructions (see below)
+
+━━━ PRE-VISIT INSTRUCTIONS (always include after booking) ━━━
+After every booking confirmation, always add naturally in the same message:
+"Please bring any previous reports or prescriptions 📋 and try to arrive 10 minutes early to complete paperwork. See you then! 😊"
+Make it feel natural, not like a robot announcement.
+
+━━━ CLINIC FAQ ━━━
+If a patient asks about clinic address, timings, fees, parking, or general info — answer from the CLINIC INFO section above.
+If the info isn't listed there, say: "I'm not sure about that — please call the clinic directly and they'll help you!"
 
 ━━━ CANCELLATION ━━━
 If a patient asks to cancel their appointment:
@@ -248,6 +326,13 @@ If a patient asks to cancel their appointment:
 3. If they have multiple appointments, ask which one they want to cancel
 4. If they have no appointments, tell them kindly there's nothing to cancel
 5. Once they confirm (reply "yes" or similar), cancel it using the CANCEL ACTION below then send a kind farewell message
+
+━━━ RESCHEDULING ━━━
+If a patient asks to reschedule or change their appointment:
+1. Find their existing appointment from "This patient's upcoming appointments" above
+2. Ask what new date and time they'd like
+3. Once confirmed, emit a CANCEL ACTION for the old appointment AND a BOOK ACTION for the new one — both on separate lines in the same message
+4. Send a warm confirmation for the new booking with pre-visit instructions
 
 ━━━ BOOKING ACTION ━━━
 When you're ready to book, put this EXACT format on its own line (the system will parse it silently):
@@ -261,7 +346,7 @@ ACTION:{"type":"CANCEL_APPOINTMENT","appointmentId":NUMBER}
 
 Then send a warm message like "Done! Your appointment has been cancelled. Hope to see you again soon! 😊"
 
-IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time slot. Only cancel after patient explicitly confirms.`;
+IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time slot. Only cancel after patient explicitly confirms. For rescheduling, both ACTION lines go in the same reply.`;
 
   const messages: ConversationMessage[] = [
     { role: "system", content: systemPrompt },
@@ -285,8 +370,8 @@ IMPORTANT: Only book when you have ALL of: patient name, doctor ID, date, time s
   let bookedPatientName: string | null = null;
 
   if (rawReply.includes("ACTION:")) {
-    const actionLine = rawReply.split("\n").find((l) => l.startsWith("ACTION:"));
-    if (actionLine) {
+    const actionLines = rawReply.split("\n").filter((l) => l.startsWith("ACTION:"));
+    for (const actionLine of actionLines) {
       try {
         const jsonStr = actionLine.replace("ACTION:", "").trim();
         const action = JSON.parse(jsonStr);
