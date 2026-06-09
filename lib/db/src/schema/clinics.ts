@@ -16,6 +16,8 @@ export const clinicsTable = pgTable("clinics", {
     parking?: string;
     other?: string;
   }>(),
+  metaPhoneNumberId: text("meta_phone_number_id"),
+  metaAccessToken: text("meta_access_token"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

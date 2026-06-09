@@ -19,6 +19,7 @@ import Reminders from "@/pages/reminders";
 import DoctorPortal from "@/pages/doctor-portal";
 import Settings from "@/pages/settings";
 import Waitlist from "@/pages/waitlist";
+import OnboardingGuide from "@/pages/onboarding-guide";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +75,7 @@ function ClinicSection() {
               <Route path="/conversations" component={Conversations} />
               <Route path="/simulator" component={Simulator} />
               <Route path="/waitlist" component={Waitlist} />
+              <Route path="/onboarding-guide" component={OnboardingGuide} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -12,6 +12,7 @@ import portalRouter from "./portal";
 import remindersRouter from "./reminders";
 import webhookRouter from "./webhook";
 import visitStatusRouter from "./visit-status";
+import metaWebhookRouter from "./meta-webhook";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,7 @@ router.use(authRouter);
 router.use(portalRouter);
 router.use(superAdminRouter);
 router.use(webhookRouter);
+router.use(metaWebhookRouter);
 
 // Protected routes — require clinic login
 router.use(requireAuth);

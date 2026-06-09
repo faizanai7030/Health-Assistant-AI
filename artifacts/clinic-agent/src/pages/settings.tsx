@@ -9,7 +9,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Mail, Lock, CheckCircle2, MessageSquare, Copy, Check, ExternalLink, Wifi, WifiOff, MapPin } from "lucide-react";
+import { Mail, Lock, CheckCircle2, MessageSquare, Copy, Check, ExternalLink, Wifi, WifiOff, MapPin, Key, ShieldCheck } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
@@ -40,10 +40,16 @@ const clinicInfoSchema = z.object({
   other: z.string().optional(),
 });
 
+const metaSchema = z.object({
+  metaPhoneNumberId: z.string().min(1, "Phone Number ID is required"),
+  metaAccessToken: z.string().optional(),
+});
+
 type EmailForm = z.infer<typeof emailSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 type WhatsappForm = z.infer<typeof whatsappSchema>;
 type ClinicInfoForm = z.infer<typeof clinicInfoSchema>;
+type MetaForm = z.infer<typeof metaSchema>;
 
 interface WhatsappSettings {
   whatsappNumber: string | null;
@@ -60,6 +66,9 @@ export default function Settings() {
   const [whatsappSaving, setWhatsappSaving] = useState(false);
   const [clinicInfoSaved, setClinicInfoSaved] = useState(false);
   const [clinicInfoSaving, setClinicInfoSaving] = useState(false);
+  const [metaSaved, setMetaSaved] = useState(false);
+  const [metaSaving, setMetaSaving] = useState(false);
+  const [hasMetaToken, setHasMetaToken] = useState(false);
 
   const emailForm = useForm<EmailForm>({
     resolver: zodResolver(emailSchema),
@@ -79,6 +88,11 @@ export default function Settings() {
   const clinicInfoForm = useForm<ClinicInfoForm>({
     resolver: zodResolver(clinicInfoSchema),
     defaultValues: { address: "", timings: "", fees: "", parking: "", other: "" },
+  });
+
+  const metaForm = useForm<MetaForm>({
+    resolver: zodResolver(metaSchema),
+    defaultValues: { metaPhoneNumberId: "", metaAccessToken: "" },
   });
 
   useEffect(() => {
@@ -102,6 +116,14 @@ export default function Settings() {
             other: data.clinicFaq.other ?? "",
           });
         }
+      })
+      .catch(() => {});
+
+    fetch(`${API_BASE}/settings/meta`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { metaPhoneNumberId: string | null; hasAccessToken: boolean }) => {
+        if (data.metaPhoneNumberId) metaForm.setValue("metaPhoneNumberId", data.metaPhoneNumberId);
+        setHasMetaToken(data.hasAccessToken);
       })
       .catch(() => {});
   }, []);
@@ -186,6 +208,33 @@ export default function Settings() {
     }
   }
 
+  async function onMetaSubmit(values: MetaForm) {
+    setMetaSaving(true);
+    try {
+      const body: Record<string, string> = { metaPhoneNumberId: values.metaPhoneNumberId };
+      if (values.metaAccessToken && values.metaAccessToken.trim()) {
+        body["metaAccessToken"] = values.metaAccessToken.trim();
+      }
+      const res = await fetch(`${API_BASE}/settings/meta`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Update failed");
+      setMetaSaved(true);
+      if (values.metaAccessToken?.trim()) setHasMetaToken(true);
+      metaForm.setValue("metaAccessToken", "");
+      setTimeout(() => setMetaSaved(false), 3000);
+      toast({ title: "Meta credentials saved", description: "Priya will now reply to patients via WhatsApp." });
+    } catch (err: unknown) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Something went wrong", variant: "destructive" });
+    } finally {
+      setMetaSaving(false);
+    }
+  }
+
   function copyWebhook() {
     if (!whatsappSettings?.webhookUrl) return;
     navigator.clipboard.writeText(whatsappSettings.webhookUrl);
@@ -221,7 +270,7 @@ export default function Settings() {
             )}
           </div>
           <CardDescription>
-            Link the WhatsApp number patients will message. Your AI agent will answer all messages sent to this number.
+            The phone number patients will WhatsApp. Enter it exactly as it appears in Meta dashboard (with country code, no spaces).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -234,10 +283,10 @@ export default function Settings() {
                   <FormItem>
                     <FormLabel>Clinic WhatsApp Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="+91 98765 43210" {...field} />
+                      <Input placeholder="+919876543210" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Enter the number exactly as it appears in your Twilio or Meta dashboard (with country code).
+                      Use the international format: +91XXXXXXXXXX (no spaces or dashes).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -251,9 +300,9 @@ export default function Settings() {
 
           {/* Webhook URL section */}
           <div className="pt-2 border-t space-y-2">
-            <p className="text-sm font-medium text-foreground">Webhook URL</p>
+            <p className="text-sm font-medium text-foreground">Meta Webhook URL</p>
             <p className="text-xs text-muted-foreground">
-              Paste this URL in your Twilio or Meta WhatsApp dashboard so messages are forwarded to your AI agent.
+              Paste this URL in your Meta Developer Console → WhatsApp → Configuration → Webhook.
             </p>
             <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
               <code className="text-xs flex-1 break-all text-foreground/80 select-all">
@@ -264,14 +313,90 @@ export default function Settings() {
               </Button>
             </div>
             <a
-              href="https://console.twilio.com"
+              href="https://developers.facebook.com/apps"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
             >
-              Open Twilio Console <ExternalLink className="w-3 h-3" />
+              Open Meta Developer Console <ExternalLink className="w-3 h-3" />
             </a>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Meta Cloud API Credentials */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-primary" />
+              <CardTitle className="text-base">Meta API Credentials</CardTitle>
+            </div>
+            {hasMetaToken ? (
+              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 gap-1.5">
+                <ShieldCheck className="w-3 h-3" /> Live — Priya is sending replies
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 gap-1.5">
+                Not configured
+              </Badge>
+            )}
+          </div>
+          <CardDescription>
+            These credentials allow Priya to actually send WhatsApp replies back to patients. Without them, Priya receives messages but cannot respond.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...metaForm}>
+            <form onSubmit={metaForm.handleSubmit(onMetaSubmit)} className="space-y-4">
+              <FormField
+                control={metaForm.control}
+                name="metaPhoneNumberId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123456789012345" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Found in Meta Developer Console → WhatsApp → API Setup → Phone Number ID.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={metaForm.control}
+                name="metaAccessToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Permanent Access Token
+                      {hasMetaToken && (
+                        <span className="ml-2 text-xs font-normal text-green-600">✓ Saved — enter a new one to replace</span>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder={hasMetaToken ? "••••••••••••• (leave blank to keep current)" : "EAAG..."}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Create this in Meta Business → System Users → Generate Token. Never expires.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={metaSaving} className="w-full">
+                {metaSaved ? (
+                  <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Saved</span>
+                ) : metaSaving ? "Saving..." : "Save Meta Credentials"}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 

@@ -100,7 +100,7 @@ router.get("/settings/whatsapp", requireAuth, async (req, res): Promise<void> =>
 
   const host = req.headers["x-forwarded-host"] ?? req.headers["host"] ?? "health-assistant-ai.replit.app";
   const protocol = req.headers["x-forwarded-proto"] ?? "https";
-  const webhookUrl = `${protocol}://${host}/api/conversations/webhook`;
+  const webhookUrl = `${protocol}://${host}/api/meta/webhook`;
 
   res.json({
     whatsappNumber: clinic?.whatsappNumber ?? null,
@@ -148,6 +148,37 @@ router.patch("/settings/whatsapp", requireAuth, async (req, res): Promise<void> 
 
   await db.update(clinicsTable).set({ whatsappNumber: cleaned }).where(eq(clinicsTable.id, req.clinicId!));
   res.json({ ok: true, whatsappNumber: cleaned });
+});
+
+router.get("/settings/meta", requireAuth, async (req, res): Promise<void> => {
+  const [clinic] = await db
+    .select({ metaPhoneNumberId: clinicsTable.metaPhoneNumberId, metaAccessToken: clinicsTable.metaAccessToken })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, req.clinicId!));
+
+  res.json({
+    metaPhoneNumberId: clinic?.metaPhoneNumberId ?? null,
+    hasAccessToken: !!(clinic?.metaAccessToken),
+  });
+});
+
+router.patch("/settings/meta", requireAuth, async (req, res): Promise<void> => {
+  const { metaPhoneNumberId, metaAccessToken } = req.body as {
+    metaPhoneNumberId?: string;
+    metaAccessToken?: string;
+  };
+
+  const updates: Record<string, string | null> = {};
+  if (metaPhoneNumberId !== undefined) updates["metaPhoneNumberId"] = metaPhoneNumberId.trim() || null;
+  if (metaAccessToken !== undefined) updates["metaAccessToken"] = metaAccessToken.trim() || null;
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "No fields to update" });
+    return;
+  }
+
+  await db.update(clinicsTable).set(updates).where(eq(clinicsTable.id, req.clinicId!));
+  res.json({ ok: true });
 });
 
 router.patch("/auth/account", requireAuth, async (req, res): Promise<void> => {
