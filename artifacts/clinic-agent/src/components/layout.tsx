@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Calendar, MessageSquare, MessageCircleCode, Bell, LogOut, Settings, ClipboardList, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, MessageSquare, MessageCircleCode, Bell, LogOut, Settings, ClipboardList } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -14,7 +14,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/reminders", label: "Reminders", icon: Bell },
     { href: "/conversations", label: "Conversations", icon: MessageSquare },
     { href: "/simulator", label: "Simulator", icon: MessageCircleCode },
-    { href: "/onboarding-guide", label: "Onboarding Guide", icon: BookOpen },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
