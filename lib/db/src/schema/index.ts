@@ -6,3 +6,5 @@ export * from "./whatsapp_messages";
 export * from "./doctor_emergencies";
 export * from "./appointment_reminders";
 export * from "./doctor_leaves";
+export * from "./waitlist";
+export * from "./no_show_log";

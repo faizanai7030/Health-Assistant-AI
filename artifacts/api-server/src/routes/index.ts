@@ -11,6 +11,7 @@ import emergencyRouter from "./emergency";
 import portalRouter from "./portal";
 import remindersRouter from "./reminders";
 import webhookRouter from "./webhook";
+import visitStatusRouter from "./visit-status";
 
 const router: IRouter = Router();
 
@@ -29,5 +30,6 @@ router.use(doctorsRouter);
 router.use(appointmentsRouter);
 router.use(conversationsRouter);
 router.use(dashboardRouter);
+router.use(visitStatusRouter);
 
 export default router;
