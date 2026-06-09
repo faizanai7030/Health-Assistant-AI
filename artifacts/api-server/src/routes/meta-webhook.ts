@@ -60,7 +60,17 @@ router.post("/meta/webhook", async (req, res): Promise<void> => {
 
         for (const msg of value.messages ?? []) {
           if (msg.type !== "text") {
-            logger.info({ type: msg.type, from: msg.from }, "Ignoring non-text Meta message");
+            logger.info({ type: msg.type, from: msg.from }, "Non-text Meta message — sending graceful reply");
+            try {
+              await sendMetaWhatsAppMessage(
+                clinic.metaPhoneNumberId!,
+                clinic.metaAccessToken,
+                msg.from,
+                "Hi! 😊 I can only read text messages. Please type your message and I'll help you book an appointment!"
+              );
+            } catch (sendErr) {
+              logger.error({ sendErr }, "Failed to send non-text reply");
+            }
             continue;
           }
 
